@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 
+// Import your session hook
+import { useSession } from "@/hooks/useSession"; 
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const ARTISAN_TYPES = [
@@ -498,9 +501,9 @@ function ViewToggle({ is3D, onToggle }: { is3D: boolean; onToggle: () => void })
   );
 }
 
-// ─── CTA Buttons — untouched ──────────────────────────────────────────────────
+// ─── CTA Buttons ──────────────────────────────────────────────────
 
-function CTAButtons() {
+function CTAButtons({ isLoggedIn }: { isLoggedIn: boolean }) {
   const base: React.CSSProperties = {
     display: "block", borderRadius: 100, cursor: "pointer",
     fontFamily: "'SF Pro Display', system-ui, -apple-system, sans-serif",
@@ -510,20 +513,24 @@ function CTAButtons() {
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 9 }}>
-      <Link href="/find" style={{ display: "block", width: 138 }}>
+      <Link href={isLoggedIn ? "/find" : "/signup"} style={{ display: "block", width: 138 }}>
         <span
           style={{ ...base, width: "100%", background: "#2d5a3d", color: "#fff", boxShadow: "0 2px 10px rgba(45,90,61,0.20)" }}
           onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#1e3f2b"; el.style.boxShadow = "0 4px 16px rgba(45,90,61,0.28)"; el.style.transform = "translateY(-1px)"; }}
           onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#2d5a3d"; el.style.boxShadow = "0 2px 10px rgba(45,90,61,0.20)"; el.style.transform = "translateY(0)"; }}
         >Find Now →</span>
       </Link>
-      <Link href="/signup" style={{ display: "block", width: 174 }}>
-        <span
-          style={{ ...base, width: "100%", background: "transparent", color: "#2d5a3d", border: "1px solid rgba(45,90,61,0.28)" }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.05)"; el.style.borderColor = "#2d5a3d"; el.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.borderColor = "rgba(45,90,61,0.28)"; el.style.transform = "translateY(0)"; }}
-        >Join as Pro</span>
-      </Link>
+      
+      {!isLoggedIn && (
+        <Link href="/signup" style={{ display: "block", width: 174 }}>
+          <span
+            style={{ ...base, width: "100%", background: "transparent", color: "#2d5a3d", border: "1px solid rgba(45,90,61,0.28)" }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.05)"; el.style.borderColor = "#2d5a3d"; el.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.borderColor = "rgba(45,90,61,0.28)"; el.style.transform = "translateY(0)"; }}
+          >Join as Pro</span>
+        </Link>
+      )}
+
       <Link href="/homeservice" style={{ display: "block", width: 212 }}>
         <span
           style={{ ...base, width: "100%", background: "rgba(45,90,61,0.07)", color: "#2d5a3d", border: "1px solid rgba(45,90,61,0.09)" }}
@@ -541,6 +548,10 @@ export function Hero() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [dots,      setDots     ] = useState<DotPos[]>([]);
   const [is3D,      setIs3D     ] = useState(false); // start 2D
+  
+  // Call the hook to get the user and determine the auth state
+  const { user } = useSession(); 
+  const isLoggedIn = !!user;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -664,7 +675,7 @@ export function Hero() {
 
           {/* CTAs — desktop only */}
           <div className="hidden lg:block">
-            <CTAButtons />
+            <CTAButtons isLoggedIn={isLoggedIn} />
           </div>
         </motion.div>
 
@@ -727,7 +738,7 @@ export function Hero() {
             transition={{ delay: 0.35, duration: 0.45 }}
             className="lg:hidden px-7 pt-6 pb-8"
           >
-            <CTAButtons />
+            <CTAButtons isLoggedIn={isLoggedIn} />
           </motion.div>
         </motion.div>
 
