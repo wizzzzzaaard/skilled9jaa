@@ -4,16 +4,18 @@ import { ArtisanHeader } from "./ArtisanHeader";
 import { SetupTab } from "./SetupTab";
 import { PostsTab } from "./PostsTab";
 import { VerifyTab } from "./VerifyTab";
+import { ApplicationsTab } from "./ApplicationsTab";
 
-type Tab = "setup" | "posts" | "verify";
+type Tab = "setup" | "posts" | "verify" | "applications";
 
 export function ArtisanProfile() {
   const [tab, setTab] = useState<Tab>("setup");
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "setup", label: "✏️ Setup" },
-    { key: "posts", label: "+ Posts" },
-    { key: "verify", label: "🛡️ Verify" },
+    { key: "setup", label: "Setup" },
+    { key: "posts", label: "Posts" },
+    { key: "verify", label: "Verify" },
+    { key: "applications", label: "Applications" },
   ];
 
   return (
@@ -22,15 +24,15 @@ export function ArtisanProfile() {
         <ArtisanHeader />
 
         {/* Tab Bar */}
-        <div className="flex gap-2 overflow-x-auto pb-1 mb-6 no-scrollbar">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar border-b border-gray-100 mb-5">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px ${
                 tab === t.key
-                  ? "bg-primary text-white"
-                  : "bg-white border border-gray-200 text-text-secondary"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
               {t.label}
@@ -43,6 +45,7 @@ export function ArtisanProfile() {
           {tab === "setup" && <SetupTab />}
           {tab === "posts" && <PostsTab />}
           {tab === "verify" && <VerifyTab />}
+          {tab === "applications" && <ApplicationsTab />}
         </div>
       </div>
     </div>
