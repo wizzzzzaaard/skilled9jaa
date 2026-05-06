@@ -6,7 +6,8 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 // Import your session hook
-import { useSession } from "@/hooks/useSession"; 
+ 
+import { useSession } from "@/lib/hooks/useSession";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
