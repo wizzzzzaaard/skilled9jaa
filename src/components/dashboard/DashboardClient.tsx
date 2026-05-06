@@ -6,6 +6,7 @@ import { useLocationStore } from "@/store/locationStore";
 import { useDashboardData } from "@/lib/hooks/useDashboardData";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { RadarMap2D } from "@/components/radar/RadarMap2D";
+import { RadarMap3D } from "@/components/radar/RadarMap3D";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardTitle } from "./DashboardTitle";
 import { ViewToggle } from "./ViewToggle";
@@ -18,9 +19,11 @@ export function DashboardClient() {
   const { user, isLoading } = useSession();
   const { latitude, longitude, city, state, requestLocation } = useLocationStore();
   const [selected, setSelected] = useState<RadarProfile | null>(null);
+  const [view, setView] = useState<"2d" | "3d">("2d");
 
   const userLat = latitude || 6.5244;
   const userLng = longitude || 3.3792;
+
   const { profiles, dataLoading } = useDashboardData(user, userLat, userLng);
 
   useEffect(() => {
@@ -45,24 +48,31 @@ export function DashboardClient() {
   if (!user) return <PageLoader />;
   if (user.account_status !== "active") return <PageLoader />;
 
-const locationLabel = (city && state)
-  ? `${city}, ${state}`
-  : city || state || user.city || user.state || "Nigeria";
- const isArtisanMode = user.is_artisan && user.active_mode === "artisan";
-const title = isArtisanMode ? "Companies near you" : "Professionals near you";
-const subtitle = dataLoading
-  ? "Finding the 15 closest to you..."
-  : isArtisanMode
-  ? `${profiles.length} closest companies`
-  : `${profiles.length} closest verified professionals`;
+  const locationLabel = (city && state)
+    ? `${city}, ${state}`
+    : city || state || user.city || user.state || "Nigeria";
+
+  const isArtisanMode = user.is_artisan && user.active_mode === "artisan";
+  const title    = isArtisanMode ? "Companies near you" : "Professionals near you";
+  const subtitle = dataLoading
+    ? "Finding the 15 closest to you..."
+    : isArtisanMode
+    ? `${profiles.length} closest companies`
+    : `${profiles.length} closest verified professionals`;
 
   return (
     <div className="min-h-screen bg-white pb-20 overflow-hidden">
       <DashboardHeader locationLabel={locationLabel} />
       <DashboardTitle title={title} subtitle={subtitle} />
-      <ViewToggle />
+      <ViewToggle view={view} onChange={setView} />
       <div className="px-4">
-        {dataLoading ? <RadarLoading /> : <RadarMap2D profiles={profiles} onSelect={setSelected} />}
+        {dataLoading ? (
+          <RadarLoading />
+        ) : view === "2d" ? (
+          <RadarMap2D profiles={profiles} onSelect={setSelected} />
+        ) : (
+          <RadarMap3D profiles={profiles} onSelect={setSelected} />
+        )}
       </div>
       <ProfileOverlay selected={selected} onClose={() => setSelected(null)} />
     </div>
