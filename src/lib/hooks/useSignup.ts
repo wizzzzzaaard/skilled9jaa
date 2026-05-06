@@ -37,7 +37,7 @@ export function useSignup() {
 
   // Derived
   const isHomeService = isHomeServiceMode && hsRole === "provider";
-  const isPaidRole = isHomeServiceMode ? hsRole === "provider" : isArtisan || isCompany;
+  const isPaidRole = isHomeServiceMode ? hsRole === "provider" : isArtisan;
 
   // Setup
   const [bio, setBio] = useState("");
