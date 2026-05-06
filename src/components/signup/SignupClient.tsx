@@ -57,6 +57,7 @@ export function SignupClient() {
                   isLoading={s.isLoading}
                   handleRoleSubmit={s.handleRoleSubmit}
                   setStep={s.setStep}
+                  displayPrice={s.displayPrice}
                 />
               </StepWrapper>
             )}
@@ -153,7 +154,7 @@ export function SignupClient() {
                   handlePaystackPay={s.handlePaystackPay}
                   setStep={s.setStep}
                   isArtisan={s.isArtisan}
-                amount={
+                  amount={
                     s.isHomeService
                       ? s.calculateHomeServiceAmount()
                       : s.displayPrice
