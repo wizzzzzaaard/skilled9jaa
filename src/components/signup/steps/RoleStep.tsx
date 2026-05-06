@@ -16,6 +16,7 @@ interface Props {
   isLoading: boolean;
   handleRoleSubmit: () => void;
   setStep: (s: any) => void;
+  displayPrice: number;
 }
 
 export function RoleStep({
@@ -31,6 +32,7 @@ export function RoleStep({
   isLoading,
   handleRoleSubmit,
   setStep,
+  displayPrice,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -73,7 +75,7 @@ export function RoleStep({
                 setIsCompany(false);
               }}
               title="Offer Services"
-              badge="₦3,200"
+              badge={`₦${displayPrice.toLocaleString()}`}
               badgeVariant="muted"
               description="I'm an artisan or job seeker — offer skills and find work."
             />
