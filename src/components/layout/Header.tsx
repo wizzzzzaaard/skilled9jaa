@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { Bell, Phone } from "lucide-react";
+import { Bell, Phone, User, LogOut } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
@@ -15,6 +15,7 @@ export function Header() {
   const pathname = usePathname();
   const logoControls = useAnimation();
   const [showPhone, setShowPhone] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const innerRef = useRef<HTMLDivElement>(null);
 
   // Route signup based on which landing page the user is on
@@ -32,6 +33,17 @@ export function Header() {
     if (typeof window !== "undefined" && window.innerWidth < 768) {
       runAnimation();
     }
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (!(e.target as Element).closest("[data-user-menu]")) {
+        setShowUserMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const runAnimation = async () => {
@@ -127,13 +139,39 @@ export function Header() {
           <div className="hidden md:flex items-center gap-3">
             {session && user ? (
               <div className="flex items-center gap-3">
-                <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                <Link href="/notifications" className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                   <Bell className="w-4 h-4 text-gray-400" />
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                </button>
-                <Link href="/dashboard">
-                  <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
                 </Link>
+                <div className="relative" data-user-menu>
+                  <button onClick={() => setShowUserMenu(!showUserMenu)}>
+                    <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
+                      <Link
+                        href="/notifications"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Bell className="w-4 h-4" /> Notifications
+                      </Link>
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <User className="w-4 h-4" /> Profile
+                      </Link>
+                      <button
+                        onClick={() => useSessionStore.getState().signOut()}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                      >
+                        <LogOut className="w-4 h-4" /> Log out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -151,13 +189,39 @@ export function Header() {
           <div className="md:hidden flex items-center">
             {session && user ? (
               <div className="flex items-center gap-3">
-                <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                <Link href="/notifications" className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                   <Bell className="w-4 h-4 text-gray-400" />
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                </button>
-                <Link href="/dashboard">
-                  <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
                 </Link>
+                <div className="relative" data-user-menu>
+                  <button onClick={() => setShowUserMenu(!showUserMenu)}>
+                    <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
+                      <Link
+                        href="/notifications"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Bell className="w-4 h-4" /> Notifications
+                      </Link>
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <User className="w-4 h-4" /> Profile
+                      </Link>
+                      <button
+                        onClick={() => useSessionStore.getState().signOut()}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                      >
+                        <LogOut className="w-4 h-4" /> Log out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <Link href={signUpHref}>
