@@ -41,12 +41,20 @@ export function DashboardSidebar() {
   if (hiddenPaths.some((p) => pathname === p || pathname?.startsWith("/book") || pathname?.startsWith("/provider") || pathname?.startsWith("/company") || pathname?.startsWith("/bill"))) return null;
 
   const isArtisan = user.is_artisan && user.active_mode === "artisan";
+  const isClient = !user.is_artisan && !user.is_company && !user.is_home_service_provider;
 
   const navItems = isArtisan
     ? [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Search", href: "/find", icon: Search },
         { label: "Jobs", href: "/jobs", icon: Briefcase },
+        { label: "Profile", href: "/profile", icon: User },
+        { label: "Settings", href: "/settings", icon: Settings },
+      ]
+    : isClient
+    ? [
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { label: "Search", href: "/find", icon: Search },
         { label: "Profile", href: "/profile", icon: User },
         { label: "Settings", href: "/settings", icon: Settings },
       ]
