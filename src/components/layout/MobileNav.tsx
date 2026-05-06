@@ -28,12 +28,19 @@ export function MobileNav() {
   if (user.account_status !== "active") return null;
 
   const isArtisan = user.is_artisan && user.active_mode === "artisan";
+  const isClientOrCompany = user.active_mode === "client" || user.active_mode === "company";
 
   const navItems = isArtisan
     ? [
         { label: "Home", href: "/dashboard", icon: Home },
         { label: "Search", href: "/find", icon: Search },
         { label: "Jobs", href: "/jobs", icon: Briefcase },
+        { label: "Profile", href: "/profile", icon: User },
+      ]
+    : isClientOrCompany
+    ? [
+        { label: "Home", href: "/dashboard", icon: Home },
+        { label: "Search", href: "/find", icon: Search },
         { label: "Profile", href: "/profile", icon: User },
       ]
     : [
