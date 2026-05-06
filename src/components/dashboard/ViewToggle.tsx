@@ -1,41 +1,50 @@
 "use client";
 
-export function ViewToggle() {
+import { LayoutGrid, Box } from "lucide-react";
+
+interface ViewToggleProps {
+  view: "2d" | "3d";
+  onChange: (v: "2d" | "3d") => void;
+}
+
+export function ViewToggle({ view, onChange }: ViewToggleProps) {
   return (
-    <div className="flex justify-center gap-2 px-4 py-3">
-      <div className="flex items-center bg-gray-100 rounded-2xl p-1">
-        <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white shadow-sm text-sm font-semibold text-text-primary">
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+    <div className="flex justify-end px-4 py-2">
+      <div
+        style={{
+          display: "flex",
+          gap: 3,
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: 10,
+          padding: 3,
+        }}
+      >
+        {(["2d", "3d"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => onChange(v)}
+            style={{
+              padding: "5px 13px",
+              borderRadius: 7,
+              border: "none",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              background: view === v ? "#1B4332" : "transparent",
+              color: view === v ? "#fff" : "#9CA3AF",
+              letterSpacing: "0.5px",
+            }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 10h16M4 14h16M4 18h16"
-            />
-          </svg>
-          2D View
-        </button>
-        <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-text-secondary">
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-            />
-          </svg>
-          3D View
-        </button>
+            {v === "2d" ? <LayoutGrid size={10} /> : <Box size={10} />}
+            {v.toUpperCase()}
+          </button>
+        ))}
       </div>
     </div>
   );
