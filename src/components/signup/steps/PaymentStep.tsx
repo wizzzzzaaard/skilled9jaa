@@ -109,7 +109,7 @@ export function PaymentStep({
         <p className="text-sm text-text-secondary">
           {isHomeService
             ? `Monthly subscription — ₦${finalAmount.toLocaleString()}/month`
-            : `One-time payment of ₦${finalAmount.toLocaleString()}. No monthly fees, no renewals.`}
+            : `One-time payment of ₦${finalAmount.toLocaleString()} for lifetime access. No monthly fees, no renewals.`}
         </p>
         {upsellAccepted && !isHomeService && (
           <p className="text-xs text-primary font-medium mt-1">
