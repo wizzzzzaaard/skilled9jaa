@@ -7,7 +7,7 @@ import { PageLoader } from "@/components/layout/PageLoader";
 import {
   MapPin, Share2, CheckCircle, ChevronLeft,
   Phone, Instagram, Twitter, Linkedin, MessageCircle,
-  Briefcase, Image as ImageIcon, Video,
+ Image as ImageIcon, Video,
 } from "lucide-react";
 
 interface ProviderProfile {
