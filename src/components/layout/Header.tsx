@@ -216,7 +216,7 @@ export function Header() {
                 <Button variant="primary" size="sm">Sign Up</Button>
               </Link>
             )}
-          </div>
+           </div>
 
         </div>
       </div>
