@@ -86,7 +86,7 @@ export function Header() {
         <div ref={innerRef} className="flex items-center justify-between h-11">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
+          <Link href={session && user ? "/dashboard" : "/"} className="flex items-center shrink-0">
             <motion.div animate={logoControls} className="relative w-9 h-9">
               <AnimatePresence mode="wait">
                 {showPhone ? (
@@ -138,40 +138,34 @@ export function Header() {
           {/* Desktop Auth */}
           <div className="hidden md:flex items-center gap-3">
             {session && user ? (
-              <div className="flex items-center gap-3">
-                <Link href="/notifications" className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                  <Bell className="w-4 h-4 text-gray-400" />
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                </Link>
-                <div className="relative" data-user-menu>
-                  <button onClick={() => setShowUserMenu(!showUserMenu)}>
-                    <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
-                  </button>
-                  {showUserMenu && (
-                    <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
-                      <Link
-                        href="/notifications"
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <Bell className="w-4 h-4" /> Notifications
-                      </Link>
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <User className="w-4 h-4" /> Profile
-                      </Link>
-                      <button
-                        onClick={() => useSessionStore.getState().signOut()}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" /> Log out
-                      </button>
-                    </div>
-                  )}
-                </div>
+              <div className="relative" data-user-menu>
+                <button onClick={() => setShowUserMenu(!showUserMenu)}>
+                  <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
+                </button>
+                {showUserMenu && (
+                  <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
+                    <Link
+                      href="/notifications"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Bell className="w-4 h-4" /> Notifications
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User className="w-4 h-4" /> Profile
+                    </Link>
+                    <button
+                      onClick={() => useSessionStore.getState().signOut()}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4" /> Log out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -188,40 +182,34 @@ export function Header() {
           {/* Mobile */}
           <div className="md:hidden flex items-center">
             {session && user ? (
-              <div className="flex items-center gap-3">
-                <Link href="/notifications" className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                  <Bell className="w-4 h-4 text-gray-400" />
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                </Link>
-                <div className="relative" data-user-menu>
-                  <button onClick={() => setShowUserMenu(!showUserMenu)}>
-                    <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
-                  </button>
-                  {showUserMenu && (
-                    <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
-                      <Link
-                        href="/notifications"
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <Bell className="w-4 h-4" /> Notifications
-                      </Link>
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <User className="w-4 h-4" /> Profile
-                      </Link>
-                      <button
-                        onClick={() => useSessionStore.getState().signOut()}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" /> Log out
-                      </button>
-                    </div>
-                  )}
-                </div>
+              <div className="relative" data-user-menu>
+                <button onClick={() => setShowUserMenu(!showUserMenu)}>
+                  <Avatar src={user.profile_image_url} name={user.full_name} size="sm" />
+                </button>
+                {showUserMenu && (
+                  <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-lg w-44 z-50 py-1">
+                    <Link
+                      href="/notifications"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Bell className="w-4 h-4" /> Notifications
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User className="w-4 h-4" /> Profile
+                    </Link>
+                    <button
+                      onClick={() => useSessionStore.getState().signOut()}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4" /> Log out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <Link href={signUpHref}>
