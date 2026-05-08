@@ -1,78 +1,124 @@
-export type ProfileMode = "client" | "artisan" | "home_service_provider" | "company";
+"use client";
+import { useRef, useState } from "react";
+import { useSessionStore } from "@/store/sessionStore";
+import { createClient } from "@/lib/supabase/client";
+import { Share2, CheckCircle, Building2, Loader2 } from "lucide-react";
 
-export type AccountStatus =
-  | "incomplete"
-  | "pending_payment"
-  | "pending_manual"
-  | "pending_verify"
-  | "active"
-  | "suspended"
-  | "rejected";
+export function CompanyHeader() {
+  const { user, refreshUser } = useSessionStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-export interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  phone_number: string | null;
-  slug: string | null;
-  company_slug: string | null;
-  profile_image_url: string | null;
-  bio: string | null;
-  state: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  is_client: boolean;
-  is_artisan: boolean;
-  is_company: boolean;
-  is_home_service_provider: boolean;
-  is_admin: boolean;
-  active_mode: ProfileMode;
-  account_status: AccountStatus;
-  payment_status: string | null;
-  verification_status: string | null;
-  nin_number: string | null;
-  nin_name_match: boolean;
-  face_verified: boolean;
-  is_available_now: boolean;
-  is_mock: boolean;
-  mock_state: string | null;
- is_published: boolean;
-signup_step: number | null;
-  years_of_experience: number | null;
-  company_name: string | null;
-  company_description: string | null;
-  company_website: string | null;
-  company_size: string | null;
-  company_logo_url: string | null;
-  subscription_expires_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
+  if (!user) return null;
 
-export interface UserLocation {
-  id: string;
-  user_id: string;
-  label: string;
-  address: string;
-  state: string;
-  city: string;
-  latitude: number | null;
-  longitude: number | null;
-  is_default: boolean;
-}
+  const displayName = user.company_name || user.full_name;
 
-export interface NearbyProvider {
-  id: string;
-  full_name: string;
-  slug: string;
-  profile_image_url: string | null;
-  bio: string | null;
-  latitude: number;
-  longitude: number;
-  distance: number;
-  is_available_now: boolean;
-  is_mock: boolean;
-  active_mode: ProfileMode;
-  account_status: AccountStatus;
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+
+    const compress = (f: File): Promise<Blob> =>
+      new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(f);
+        img.onload = () => {
+          const MAX = 400;
+          let { width, height } = img;
+          if (width > MAX) { height = (height * MAX) / width; width = MAX; }
+          const canvas = document.createElement("canvas");
+          canvas.width = width; canvas.height = height;
+          canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((b) => resolve(b!), "image/webp", 0.8);
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      });
+
+    const compressed = await compress(file);
+    const supabase = createClient();
+    const path = `profiles/${user.id}/company-logo.webp`;
+    await supabase.storage.from("skilled-niger-assets").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+    const { data: { publicUrl } } = supabase.storage.from("skilled-niger-assets").getPublicUrl(path);
+    await supabase.from("profiles").update({ company_logo_url: publicUrl }).eq("id", user.id);
+    await refreshUser();
+    setUploading(false);
+  }
+
+  async function handleShare() {
+    const url = `${window.location.origin}/company/${user?.company_slug || user?.id}`;
+    if (navigator.share) {
+      await navigator.share({ title: displayName || "", url });
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
+      <p className="text-xs text-text-secondary mb-4">Company Profile · Manage your company</p>
+
+      <div className="flex items-start gap-4">
+        <div className="relative flex-shrink-0">
+          <div
+            className={`w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden ${
+              uploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+            }`}
+            onClick={() => !uploading && fileRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            ) : user.company_logo_url ? (
+              <img src={user.company_logo_url} alt={displayName || ""} className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="w-7 h-7 text-primary" />
+            )}
+          </div>
+          <button
+            onClick={() => !uploading && fileRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white shadow text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ✏️
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+            disabled={uploading}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-text-primary text-lg leading-tight">{displayName}</h2>
+            {user.verification_status === "verified" && (
+              <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+            )}
+          </div>
+          <p className="text-xs text-text-secondary truncate">{user.email}</p>
+          {user.company_size && (
+            <p className="text-xs text-text-secondary mt-0.5">{user.company_size}</p>
+          )}
+          <a
+            href="https://wa.me/2348166888001"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary font-medium"
+          >
+            Need help? Click to reach us
+          </a>
+        </div>
+      </div>
+
+      <button
+        onClick={handleShare}
+        className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-primary text-primary font-semibold text-sm"
+      >
+        <Share2 className="w-4 h-4" /> Share Company Profile
+      </button>
+    </div>
+  );
 }
