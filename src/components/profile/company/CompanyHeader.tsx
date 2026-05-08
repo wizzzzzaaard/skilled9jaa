@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useSessionStore } from "@/store/sessionStore";
 import { createClient } from "@/lib/supabase/client";
-import { Share2, CheckCircle, Building2 } from "lucide-react";
+import { Share2, CheckCircle, Building2, Loader2 } from "lucide-react";
 
 export function CompanyHeader() {
   const { user, refreshUser } = useSessionStore();
@@ -61,22 +61,34 @@ export function CompanyHeader() {
       <div className="flex items-start gap-4">
         <div className="relative flex-shrink-0">
           <div
-            className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center cursor-pointer overflow-hidden"
-            onClick={() => fileRef.current?.click()}
+            className={`w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden ${
+              uploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+            }`}
+            onClick={() => !uploading && fileRef.current?.click()}
           >
-            {user.company_logo_url ? (
+            {uploading ? (
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            ) : user.company_logo_url ? (
               <img src={user.company_logo_url} alt={displayName || ""} className="w-full h-full object-cover" />
             ) : (
               <Building2 className="w-7 h-7 text-primary" />
             )}
           </div>
           <button
-            onClick={() => fileRef.current?.click()}
-            className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white shadow text-xs"
+            onClick={() => !uploading && fileRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white shadow text-xs disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ✏️
           </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+            disabled={uploading}
+          />
         </div>
 
         <div className="flex-1 min-w-0">
