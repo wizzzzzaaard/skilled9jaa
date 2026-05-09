@@ -4,7 +4,7 @@ import { useSessionStore } from "@/store/sessionStore";
 import { createClient } from "@/lib/supabase/client";
 import { useUIStore } from "@/store/uiStore";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, MapPin, Briefcase, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin, Briefcase, Eye, CheckCircle, XCircle,} from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
