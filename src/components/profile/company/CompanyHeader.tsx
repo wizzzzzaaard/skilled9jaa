@@ -99,8 +99,8 @@ export function CompanyHeader() {
             )}
           </div>
           <p className="text-xs text-text-secondary truncate">{user.email}</p>
-          {user.industry && (
-            <p className="text-xs text-text-secondary mt-0.5">{user.industry}</p>
+          {user.company_size && (
+            <p className="text-xs text-text-secondary mt-0.5">{user.company_size}</p>
           )}
           <a
             href="https://wa.me/2348166888001"
