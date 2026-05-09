@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, } from "react";
 import { useSessionStore } from "@/store/sessionStore";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/Input";
