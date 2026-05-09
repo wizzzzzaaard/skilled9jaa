@@ -45,6 +45,8 @@ signup_step: number | null;
   company_website: string | null;
   company_size: string | null;
   company_logo_url: string | null;
+  industry: string | null;        
+  business_type: string | null;   
   subscription_expires_at: string | null;
   created_at: string;
   updated_at: string;
