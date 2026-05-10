@@ -39,7 +39,7 @@ function Radar2D() {
       setVisible(prev => {
         const s = new Set(prev);
         DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 40) s.add(d.id); });
-        return [...s];
+        return Array.from(s);
       });
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -124,7 +124,7 @@ function Radar3D() {
       setVisible(prev => {
         const s = new Set(prev);
         DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 40) s.add(d.id); });
-        return [...s];
+        return Array.from(s);
       });
       rafRef.current = requestAnimationFrame(tick);
     };
