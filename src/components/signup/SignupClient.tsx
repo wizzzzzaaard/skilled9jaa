@@ -5,6 +5,7 @@ import { useSignup } from "@/lib/hooks/useSignup";
 import { StepWrapper } from "./StepWrapper";
 import { SignupHeader } from "./SignupHeader";
 import { SignupProgress } from "./SignupProgress";
+import { IntroStep } from "./steps/IntroStep";
 import { BasicStep } from "./steps/BasicStep";
 import { RoleStep } from "./steps/RoleStep";
 import { SetupStep } from "./steps/SetupStep";
@@ -26,6 +27,15 @@ export function SignupClient() {
 
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <AnimatePresence mode="wait">
+            {s.step === "intro" && (
+              <StepWrapper stepKey="intro">
+                <IntroStep
+                  setStep={s.setStep}
+                  displayPrice={s.displayPrice}
+                />
+              </StepWrapper>
+            )}
+
             {s.step === "basic" && (
               <StepWrapper stepKey="basic">
                 <BasicStep
@@ -64,7 +74,7 @@ export function SignupClient() {
 
             {s.step === "setup" && (
               <StepWrapper stepKey="setup">
-               <SetupStep
+                <SetupStep
                   bio={s.bio}
                   setBio={s.setBio}
                   phone={s.phone}
