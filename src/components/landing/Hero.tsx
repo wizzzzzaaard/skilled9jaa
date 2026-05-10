@@ -259,19 +259,20 @@ export function Hero() {
             color: G.teal, fontWeight: 600, marginBottom: 12,
             fontFamily: "monospace",
           }}>
-      Here is how it works for artisan/employees.
+            SMART PROXIMITY MATCHING
           </p>
           <h1 style={{
-            fontSize: "clamp(21px, 3.2vw, 34px)",
+            fontSize: "clamp(18px, 2.7vw, 29px)",
             fontWeight: 800, color: G.dark,
             lineHeight: 1.2, margin: "0 0 14px",
             letterSpacing: "-0.02em",
           }}>
-            you find businesses closest to you based on your location,you find nearest artisans to you in realtime based on your location as well.
+            Apply for top-tier jobs and get skilled artisans just minutes away!
           </h1>
           <p style={{ fontSize: 13.5, color: "#6b7c74", lineHeight: 1.65, margin: "0 0 28px" }}>
-            Get that job with accommodation and feeding in Lagos — apply within.
+            Skip the long commute and save on transport fares. Use live GPS to uncover premium roles around you, filter for perks like accommodation and feeding, and apply directly within the platform.
           </p>
+
 
           {/* Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
