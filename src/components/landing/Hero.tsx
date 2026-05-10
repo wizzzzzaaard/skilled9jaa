@@ -134,7 +134,7 @@ function Radar3D() {
 
   const cx = 150, cy = 168, sY = 0.44, rings = [40, 75, 112];
 
-  const to3D = (angle, r) => {
+  const to3D = (angle: number, r: number) => {
     const rd = (angle * Math.PI) / 180;
     return { x: Math.cos(rd) * r, y: Math.sin(rd) * r * sY };
   };
