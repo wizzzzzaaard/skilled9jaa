@@ -4,9 +4,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
-
-// Import your session hook
- 
 import { useSession } from "@/lib/hooks/useSession";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -31,17 +28,18 @@ const PROVIDERS = [
   { id: "carpenter",    imgUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=80&h=80&fit=crop&auto=format", need: "I need a carpenter ASAP",              name: "Chidi O.",   location: "Yaba" },
 ];
 
+// Green shades only — no loud colors
 const FALLBACK_COLORS: Record<string, string> = {
-  lawyer:       "#dce8e0",
-  plumber:      "#dce4e8",
-  chef:         "#ece4d8",
-  driver:       "#dce0e8",
-  cleaner:      "#e4ece0",
-  elec:         "#ece8d8",
-  dev:          "#e0dce8",
-  accountant:   "#d8e8e4",
-  receptionist: "#e8dce4",
-  carpenter:    "#ece0dc",
+  lawyer:       "#d8f3dc",
+  plumber:      "#b7e4c7",
+  chef:         "#95d5b2",
+  driver:       "#74c69d",
+  cleaner:      "#52b788",
+  elec:         "#40916c",
+  dev:          "#d8f3dc",
+  accountant:   "#b7e4c7",
+  receptionist: "#95d5b2",
+  carpenter:    "#74c69d",
 };
 
 type Provider = (typeof PROVIDERS)[number];
@@ -144,17 +142,13 @@ function HeroRadar({
       const cx   = W / 2;
       const cy   = H / 2;
       const maxR = Math.min(W, H) * 0.42;
-      // Ring radii fractions
       const rings = [0.30, 0.50, 0.72, 0.92];
-
       const use3D = is3DRef.current;
 
       if (use3D) {
-        // ── 3D MODE: tilted ellipse perspective ──────────────────────────────
-        const scaleY = 0.38; // vertical compression for 3D tilt
-        const baseY  = cy + maxR * 0.08; // shift center slightly down
+        const scaleY = 0.38;
+        const baseY  = cy + maxR * 0.08;
 
-        // Draw elliptical rings
         rings.forEach((r, i) => {
           const rx = r * maxR;
           const ry = rx * scaleY;
@@ -165,7 +159,6 @@ function HeroRadar({
           ctx.stroke();
         });
 
-        // 3D sweep (arc on ellipse)
         ctx.save();
         ctx.translate(cx, baseY);
         const sweepAngle = t % (Math.PI * 2);
@@ -187,10 +180,10 @@ function HeroRadar({
         ctx.fill();
         ctx.restore();
 
-        // Active connector line (3D)
         const activeDot3D = dotsRef.current.find(d => d.id === activeRef.current);
         if (activeDot3D) {
-          const { sx3, sy3 } = get3DPos(activeDot3D, cx, baseY, maxR, scaleY, t);
+          const sx3 = cx + Math.cos(activeDot3D.angle) * activeDot3D.r;
+          const sy3 = baseY + Math.sin(activeDot3D.angle) * activeDot3D.r * scaleY;
           ctx.save();
           ctx.setLineDash([3, 5]);
           ctx.beginPath();
@@ -203,21 +196,18 @@ function HeroRadar({
           ctx.restore();
         }
 
-        // Draw dots in 3D — sort by Y (painter's algorithm: back-to-front)
-        const sorted3D = [...dotsRef.current].sort((a, b) => {
-          const ya = Math.sin(a.angle) * scaleY;
-          const yb = Math.sin(b.angle) * scaleY;
-          return ya - yb;
-        });
-
+        const sorted3D = [...dotsRef.current].sort((a, b) =>
+          Math.sin(a.angle) * scaleY - Math.sin(b.angle) * scaleY
+        );
         const drawn3D: { id: string; px: number; py: number }[] = [];
 
         sorted3D.forEach((dp) => {
-          const { sx3, sy3 } = get3DPos(dp, cx, baseY, maxR, scaleY, t);
+          const floatY = Math.sin(t * 0.9 + dp.phase) * 2;
+          const sx3 = cx + Math.cos(dp.angle) * dp.r;
+          const sy3 = baseY + Math.sin(dp.angle) * dp.r * scaleY + floatY;
           const isActive = dp.id === activeRef.current;
-
-          // Pin stem
           const stemH = isActive ? 28 : 20;
+
           ctx.beginPath();
           ctx.moveTo(sx3, sy3);
           ctx.lineTo(sx3, sy3 - stemH);
@@ -225,7 +215,6 @@ function HeroRadar({
           ctx.lineWidth   = isActive ? 1.2 : 0.8;
           ctx.stroke();
 
-          // Shadow ellipse on ground
           ctx.save();
           ctx.beginPath();
           ctx.ellipse(sx3, sy3, 8, 3, 0, 0, Math.PI * 2);
@@ -233,20 +222,13 @@ function HeroRadar({
           ctx.fill();
           ctx.restore();
 
-          // Circle at top of pin
-          const headY = sy3 - stemH;
-          drawDotCircle(ctx, dp, sx3, headY, isActive, imgCache, t);
-          drawn3D.push({ id: dp.id, px: sx3, py: headY });
+          drawDotCircle(ctx, dp, sx3, sy3 - stemH, isActive, imgCache, t);
+          drawn3D.push({ id: dp.id, px: sx3, py: sy3 - stemH });
         });
 
         drawnRef.current = drawn3D;
 
-        // No center marker in 3D mode
-
       } else {
-        // ── 2D MODE: flat concentric circles ─────────────────────────────────
-
-        // Rings
         rings.forEach((r, i) => {
           ctx.beginPath();
           ctx.arc(cx, cy, r * maxR, 0, Math.PI * 2);
@@ -255,7 +237,6 @@ function HeroRadar({
           ctx.stroke();
         });
 
-        // Sweep
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(t % (Math.PI * 2));
@@ -270,7 +251,6 @@ function HeroRadar({
         ctx.fill();
         ctx.restore();
 
-        // Active connector
         const activeDot2D = dotsRef.current.find(d => d.id === activeRef.current);
         if (activeDot2D) {
           const fy = Math.sin(t * 0.9 + activeDot2D.phase) * 2;
@@ -286,7 +266,16 @@ function HeroRadar({
           ctx.restore();
         }
 
-        // Dots
+        // Center pulses
+        [0, 1].forEach((i) => {
+          const pr = 16 + i * 14 + Math.sin(t * 1.8 + i) * 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, pr, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(45,90,61,${0.12 - i * 0.04})`;
+          ctx.lineWidth   = 1;
+          ctx.stroke();
+        });
+
         const drawn2D: { id: string; px: number; py: number }[] = [];
         dotsRef.current.forEach((dp) => {
           const fy = Math.sin(t * 0.9 + dp.phase) * 2;
@@ -297,7 +286,6 @@ function HeroRadar({
         });
         drawnRef.current = drawn2D;
 
-        // Centre dot (2D only)
         drawCenter2D(ctx, cx, cy);
       }
 
@@ -308,15 +296,6 @@ function HeroRadar({
     return () => { cancelAnimationFrame(rafRef.current); ro.disconnect(); };
   }, [imgCache]);
 
-  // ── helpers ──────────────────────────────────────────────────────────────────
-
-  function get3DPos(dp: DotPos, cx: number, baseY: number, _maxR: number, scaleY: number, t: number) {
-    const floatY = Math.sin(t * 0.9 + dp.phase) * 2;
-    const sx3 = cx + Math.cos(dp.angle) * dp.r;
-    const sy3 = baseY + Math.sin(dp.angle) * dp.r * scaleY + floatY;
-    return { sx3, sy3 };
-  }
-
   function drawDotCircle(
     ctx: CanvasRenderingContext2D,
     dp: DotPos,
@@ -325,10 +304,8 @@ function HeroRadar({
     imgCache: React.MutableRefObject<Map<string, HTMLImageElement>>,
     _t: number,
   ) {
-    // Fixed small radius — NO size change on active
     const radius = 14;
 
-    // Active: thicker green ring only (no size change, no pulse scale)
     if (isActive) {
       ctx.beginPath();
       ctx.arc(px, py, radius + 5, 0, Math.PI * 2);
@@ -337,16 +314,14 @@ function HeroRadar({
       ctx.stroke();
     }
 
-    // Fallback bg
     ctx.beginPath();
     ctx.arc(px, py, radius, 0, Math.PI * 2);
-    ctx.fillStyle   = FALLBACK_COLORS[dp.id] ?? "#e8eee8";
+    ctx.fillStyle   = FALLBACK_COLORS[dp.id] ?? "#b7e4c7";
     ctx.shadowColor = isActive ? "rgba(45,90,61,0.22)" : "rgba(0,0,0,0.07)";
     ctx.shadowBlur  = isActive ? 12 : 5;
     ctx.fill();
     ctx.shadowBlur  = 0;
 
-    // Photo
     const img = imgCache.current.get(dp.id);
     if (img && img.complete && img.naturalHeight > 0) {
       ctx.save();
@@ -358,7 +333,6 @@ function HeroRadar({
       ctx.restore();
     }
 
-    // Border — thicker green on active, thin on others
     ctx.beginPath();
     ctx.arc(px, py, radius, 0, Math.PI * 2);
     ctx.strokeStyle = isActive ? "#2d5a3d" : "rgba(45,90,61,0.18)";
@@ -367,7 +341,6 @@ function HeroRadar({
   }
 
   function drawCenter2D(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
-    // 2D only — "You" dot, never shown in 3D
     const sR = 14;
     ctx.beginPath();
     ctx.arc(cx, cy, sR, 0, Math.PI * 2);
@@ -424,7 +397,7 @@ function RequestCard({ provider }: { provider: Provider }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
         <div style={{
           width: 26, height: 26, borderRadius: "50%", overflow: "hidden",
-          flexShrink: 0, background: FALLBACK_COLORS[provider.id] ?? "#e8eee8",
+          flexShrink: 0, background: FALLBACK_COLORS[provider.id] ?? "#b7e4c7",
         }}>
           <img src={provider.imgUrl} alt={provider.name}
             style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -445,7 +418,7 @@ function RequestCard({ provider }: { provider: Provider }) {
   );
 }
 
-// ─── 2D / 3D Toggle — top-left of radar ──────────────────────────────────────
+// ─── 2D / 3D Toggle ──────────────────────────────────────────────────────────
 
 function ViewToggle({ is3D, onToggle }: { is3D: boolean; onToggle: () => void }) {
   return (
@@ -453,10 +426,7 @@ function ViewToggle({ is3D, onToggle }: { is3D: boolean; onToggle: () => void })
       onClick={onToggle}
       aria-label="Toggle 2D / 3D view"
       style={{
-        position: "absolute",
-        top: 12,          // top-left, matching reference image
-        left: 12,
-        zIndex: 20,
+        position: "absolute", top: 12, left: 12, zIndex: 20,
         display: "flex", alignItems: "center",
         background: "rgba(255,255,255,0.82)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
@@ -480,13 +450,11 @@ function ViewToggle({ is3D, onToggle }: { is3D: boolean; onToggle: () => void })
             }}
           >
             {label === "3D" ? (
-              // cube icon
               <svg width="9" height="9" viewBox="0 0 12 12" fill="none" style={{ opacity: active ? 1 : 0.5 }}>
                 <path d="M6 1L11 3.5V8.5L6 11L1 8.5V3.5L6 1Z" stroke={active ? "#fff" : "#8a8a82"} strokeWidth="1.2" fill="none"/>
                 <path d="M6 1V11M1 3.5L6 6L11 3.5" stroke={active ? "#fff" : "#8a8a82"} strokeWidth="1.2"/>
               </svg>
             ) : (
-              // grid icon
               <svg width="9" height="9" viewBox="0 0 12 12" fill="none" style={{ opacity: active ? 1 : 0.5 }}>
                 <rect x="1" y="1" width="4" height="4" rx="0.5" stroke={active ? "#fff" : "#8a8a82"} strokeWidth="1.2"/>
                 <rect x="7" y="1" width="4" height="4" rx="0.5" stroke={active ? "#fff" : "#8a8a82"} strokeWidth="1.2"/>
@@ -502,7 +470,7 @@ function ViewToggle({ is3D, onToggle }: { is3D: boolean; onToggle: () => void })
   );
 }
 
-// ─── CTA Buttons ──────────────────────────────────────────────────
+// ─── CTA Buttons ──────────────────────────────────────────────────────────────
 
 function CTAButtons({ isLoggedIn }: { isLoggedIn: boolean }) {
   const base: React.CSSProperties = {
@@ -517,17 +485,17 @@ function CTAButtons({ isLoggedIn }: { isLoggedIn: boolean }) {
       <Link href={isLoggedIn ? "/find" : "/signup"} style={{ display: "block", width: 138 }}>
         <span
           style={{ ...base, width: "100%", background: "#2d5a3d", color: "#fff", boxShadow: "0 2px 10px rgba(45,90,61,0.20)" }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#1e3f2b"; el.style.boxShadow = "0 4px 16px rgba(45,90,61,0.28)"; el.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#2d5a3d"; el.style.boxShadow = "0 2px 10px rgba(45,90,61,0.20)"; el.style.transform = "translateY(0)"; }}
+          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#1e3f2b"; el.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "#2d5a3d"; el.style.transform = "translateY(0)"; }}
         >Find Now →</span>
       </Link>
-      
+
       {!isLoggedIn && (
         <Link href="/signup" style={{ display: "block", width: 174 }}>
           <span
             style={{ ...base, width: "100%", background: "transparent", color: "#2d5a3d", border: "1px solid rgba(45,90,61,0.28)" }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.05)"; el.style.borderColor = "#2d5a3d"; el.style.transform = "translateY(-1px)"; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.borderColor = "rgba(45,90,61,0.28)"; el.style.transform = "translateY(0)"; }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.05)"; el.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.transform = "translateY(0)"; }}
           >Join as Pro</span>
         </Link>
       )}
@@ -535,8 +503,8 @@ function CTAButtons({ isLoggedIn }: { isLoggedIn: boolean }) {
       <Link href="/homeservice" style={{ display: "block", width: 212 }}>
         <span
           style={{ ...base, width: "100%", background: "rgba(45,90,61,0.07)", color: "#2d5a3d", border: "1px solid rgba(45,90,61,0.09)" }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.12)"; el.style.borderColor = "rgba(45,90,61,0.20)"; el.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.07)"; el.style.borderColor = "rgba(45,90,61,0.09)"; el.style.transform = "translateY(0)"; }}
+          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.12)"; el.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(45,90,61,0.07)"; el.style.transform = "translateY(0)"; }}
         >Home Service</span>
       </Link>
     </div>
@@ -548,17 +516,15 @@ function CTAButtons({ isLoggedIn }: { isLoggedIn: boolean }) {
 export function Hero() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [dots,      setDots     ] = useState<DotPos[]>([]);
-  const [is3D,      setIs3D     ] = useState(false); // start 2D
-  
-  // Call the hook to get the user and determine the auth state
-  const { user } = useSession(); 
+  const [is3D,      setIs3D     ] = useState(false);
+
+  const { user } = useSession();
   const isLoggedIn = !!user;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const imgCache     = useRef<Map<string, HTMLImageElement>>(new Map());
 
-  // Preload images
   useEffect(() => {
     PROVIDERS.forEach((p) => {
       const img = new window.Image();
@@ -568,7 +534,6 @@ export function Hero() {
     });
   }, []);
 
-  // Build dot positions — well spaced across rings
   useEffect(() => {
     function build() {
       if (!containerRef.current) return;
@@ -576,25 +541,17 @@ export function Hero() {
       const H = containerRef.current.offsetHeight;
       const cx = W / 2, cy = H / 2;
       const maxR = Math.min(W, H) * 0.42;
-      // Distribute across 4 rings evenly with angular offset per ring
       const ringDefs = [0.30, 0.50, 0.72, 0.92];
       const n = PROVIDERS.length;
       setDots(PROVIDERS.map((p, i) => {
-        const ringIdx = i % ringDefs.length;
+        const ringIdx     = i % ringDefs.length;
         const itemsOnRing = Math.ceil(n / ringDefs.length);
         const posOnRing   = Math.floor(i / ringDefs.length);
         const angle = (posOnRing / itemsOnRing) * Math.PI * 2
-                    + (ringIdx * Math.PI * 0.52) // offset each ring so nothing overlaps
+                    + (ringIdx * Math.PI * 0.52)
                     + 0.1;
         const r = ringDefs[ringIdx] * maxR;
-        return {
-          id: p.id,
-          x: cx + Math.cos(angle) * r,
-          y: cy + Math.sin(angle) * r,
-          angle, r,
-          phase: (i / n) * Math.PI * 2,
-          p,
-        };
+        return { id: p.id, x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r, angle, r, phase: (i / n) * Math.PI * 2, p };
       }));
     }
     build();
@@ -602,7 +559,6 @@ export function Hero() {
     return () => window.removeEventListener("resize", build);
   }, []);
 
-  // Auto-cycle
   useEffect(() => {
     intervalRef.current = setInterval(
       () => setActiveIdx(prev => (prev + 1) % PROVIDERS.length),
@@ -629,7 +585,7 @@ export function Hero() {
     <section className="relative bg-white overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-stretch lg:min-h-[620px]">
 
-        {/* ─── LEFT: text + CTAs ─────────────────────────────── */}
+        {/* ─── LEFT ──────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, x: -14 }}
           animate={{ opacity: 1, x: 0   }}
@@ -639,42 +595,49 @@ export function Hero() {
                      pt-4 pb-4 lg:pt-10 lg:pb-0
                      lg:w-[46%] xl:w-[44%]"
         >
-          {/* Headline */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0  }}
             transition={{ duration: 0.45 }}
           >
+            {/* Label */}
+            <p style={{
+              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              color: "#52b788", fontWeight: 600, marginBottom: 6, marginTop: 0,
+            }}>
+              Here's exactly how
+            </p>
+
+            {/* Headline */}
             <h1
               className="font-semibold text-text-primary tracking-tight leading-tight"
-              style={{ fontSize: "clamp(15px, 4vw, 2.75rem)", marginTop: 0 }}
+              style={{ fontSize: "clamp(22px, 5vw, 3.2rem)", marginTop: 0, marginBottom: 0 }}
             >
-              For employeez, remote workers &amp; artisans.
+              Clients find you
             </h1>
           </motion.div>
 
-          {/* Bullet points — same size as reference */}
-          <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0 0" }}>
-            <li style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#7a7a72", marginBottom: 5 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2d5a3d", flexShrink: 0, opacity: 0.7 }} />
-              Get notified for job opportunities near you
-            </li>
-            <li style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#7a7a72", marginBottom: 5 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2d5a3d", flexShrink: 0, opacity: 0.7 }} />
-              Our artisans report not less than 20 calls per week
-            </li>
-            <li style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#7a7a72" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2d5a3d", flexShrink: 0, opacity: 0.7 }} />
-              GPS to connect you to closest opportunities
-            </li>
+          {/* 4 Bullets */}
+          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0 0" }}>
+            {[
+              "Get notified when companies near you are hiring",
+              "Our artisans report not less than 20 calls per week",
+              "GPS connects you to the closest companies — less transport cost",
+              "No commission — payments go directly between you and the client",
+            ].map((text) => (
+              <li key={text} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12.5, color: "#7a7a72", marginBottom: 6 }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2d5a3d", flexShrink: 0, opacity: 0.7, marginTop: 4 }} />
+                {text}
+              </li>
+            ))}
           </ul>
 
           {/* Chip marquee */}
-          <div style={{ marginTop: 14, marginBottom: 0, maxWidth: 380 }}>
+          <div style={{ marginTop: 14, marginBottom: 14, maxWidth: 380 }}>
             <ArtisanMarquee />
           </div>
 
-          {/* CTAs — desktop only */}
+          {/* CTAs — desktop */}
           <div className="hidden lg:block">
             <CTAButtons isLoggedIn={isLoggedIn} />
           </div>
@@ -713,7 +676,6 @@ export function Hero() {
               <RequestCard key={activeProvider.id} provider={activeProvider} />
             </AnimatePresence>
 
-            {/* Toggle — top-left */}
             <ViewToggle is3D={is3D} onToggle={() => setIs3D(v => !v)} />
 
             {/* Progress pills */}
@@ -732,7 +694,7 @@ export function Hero() {
             </div>
           </div>
 
-          {/* CTAs — mobile only */}
+          {/* CTAs — mobile */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0  }}
