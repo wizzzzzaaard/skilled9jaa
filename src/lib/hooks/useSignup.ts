@@ -17,7 +17,7 @@ export function useSignup() {
   const stepParam = searchParams.get("step");
   const isHomeServiceMode = modeParam === "homeservice";
 
-  const [step, setStep] = useState<Step>("basic");
+  const [step, setStep] = useState<Step>("intro"); // ← CHANGED from "basic"
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -73,8 +73,9 @@ export function useSignup() {
   const [hsPlan, setHsPlan] = useState<"growth" | "business" | "unlimited">("growth");
   const [hsCategoriesLoading, setHsCategoriesLoading] = useState(false);
 
-  // Steps array
+  // Steps array — "intro" added as first step
   const steps: { key: Step; label: string }[] = [
+    { key: "intro", label: "Intro" }, // ← ADDED
     { key: "basic", label: "Basic Info" },
     { key: "role", label: "Profile" },
     { key: "setup", label: "Setup" },
@@ -402,7 +403,6 @@ export function useSignup() {
       ? "company_subscription"
       : "artisan_subscription";
 
-    // Insert order first — its UUID becomes the Paystack reference
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -432,7 +432,6 @@ export function useSignup() {
         ref: reference,
         currency: "NGN",
         callback: () => {
-          // Edge function handles all DB updates — just advance the step
           const supabase = createClient();
           supabase
             .from("profiles")
