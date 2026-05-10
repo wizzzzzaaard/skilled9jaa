@@ -11,6 +11,14 @@ const GREEN_RGBA   = "27,67,50";
 const R_BASE       = 13;
 const R_HOV        = 17;
 
+const GREEN_SHADES = ["#d8f3dc", "#b7e4c7", "#95d5b2", "#74c69d", "#52b788", "#40916c"];
+
+function getGreenShade(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GREEN_SHADES[hash % GREEN_SHADES.length];
+}
+
 interface PlacedDot {
   profile: RadarProfile;
   x: number;
@@ -154,9 +162,9 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       } else {
         ctx.beginPath();
         ctx.arc(px, py, radius - 1, 0, Math.PI * 2);
-        ctx.fillStyle = profile.is_company ? GREEN : "#F3F4F6";
+        ctx.fillStyle = profile.is_company ? GREEN : getGreenShade(id);
         ctx.fill();
-        ctx.fillStyle    = profile.is_company ? "#fff" : GREEN;
+        ctx.fillStyle    = "#fff";
         ctx.font         = `700 ${Math.max(7, Math.floor(radius * 0.5))}px system-ui, sans-serif`;
         ctx.textAlign    = "center";
         ctx.textBaseline = "middle";
@@ -166,11 +174,10 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
 
       ctx.beginPath();
       ctx.arc(px, py, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = isHov ? GREEN : "rgba(229,231,235,1)";
+      ctx.strokeStyle = isHov ? GREEN : `rgba(${GREEN_RGBA},0.20)`;
       ctx.lineWidth   = isHov ? 2.5 : 1.5;
       ctx.stroke();
 
-      // name label — 15% smaller
       const displayName = profile.company_name || profile.full_name || "?";
       const shortName   = displayName.length > 12 ? displayName.slice(0, 11) + "…" : displayName;
       ctx.fillStyle    = "#111827";
@@ -179,7 +186,6 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       ctx.textBaseline = "alphabetic";
       ctx.fillText(shortName, px, py + radius + 11);
 
-      // distance label — 15% smaller
       const dist = profile.distance_km < 1
         ? `${(profile.distance_km * 1000).toFixed(0)}m`
         : `${profile.distance_km.toFixed(1)} km`;
@@ -201,7 +207,6 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       const cy   = H / 2;
       const maxR = Math.min(W, H) * 0.44;
 
-      // background radial
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 1.1);
       bg.addColorStop(0, "#F9FAFB");
       bg.addColorStop(1, "#F3F4F6");
@@ -210,7 +215,6 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       ctx.fillStyle = bg;
       ctx.fill();
 
-      // rings
       RING_RATIOS.forEach((ratio, i) => {
         const rad = ratio * maxR;
         ctx.beginPath();
@@ -224,7 +228,7 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
         ctx.fillText(RING_LABELS[i], cx + rad + 4, cy + 3);
       });
 
-      // sweep
+      // Sweep with ping trail
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(t % (Math.PI * 2));
@@ -239,7 +243,7 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       ctx.fill();
       ctx.restore();
 
-      // center pulses
+      // Center pulses
       [0, 1, 2].forEach((i) => {
         const pr = 16 + i * 16 + Math.sin(t * 1.8 + i) * 3;
         ctx.beginPath();
@@ -249,7 +253,6 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
         ctx.stroke();
       });
 
-      // dots
       const drawn: { id: string; px: number; py: number }[] = [];
       dotsRef.current.forEach((dp) => {
         const fy     = Math.sin(t * 0.9 + dp.phase) * 3;
@@ -274,7 +277,7 @@ export function RadarMap2D({ profiles, onSelect }: RadarMap2DProps) {
       });
       drawnRef.current = drawn;
 
-      // center "You" dot
+      // Center "You"
       ctx.beginPath();
       ctx.arc(cx, cy, 18, 0, Math.PI * 2);
       ctx.fillStyle   = GREEN;
