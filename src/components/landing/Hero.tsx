@@ -2,43 +2,44 @@
 
 import { useState, useEffect, useRef } from "react";
 
-// ── Palette ──────────────────────────────────────────────────────────────────
+// ── Palette ───────────────────────────────────────────────────────────────────
 const G = {
-  dark:  "#1a3d2b",
-  mid:   "#2d6a4f",
-  teal:  "#52b788",
-  pale:  "#d8f3dc",
-  bg:    "#f7faf8",
-  card:  "#ffffff",
+  dark: "#1a3d2b",
+  mid:  "#2d6a4f",
+  teal: "#52b788",
+  pale: "#d8f3dc",
+  bg:   "#f7faf8",
 };
 
-// ── Artisan dots ─────────────────────────────────────────────────────────────
+// ── Dots data (5 rings, job-request labels) ───────────────────────────────────
 const DOTS = [
-  { id: 1, label: "Plumber",      initials: "PL", angle: 30,  ring: 1 },
-  { id: 2, label: "Electrician",  initials: "EL", angle: 110, ring: 2 },
-  { id: 3, label: "Chef",         initials: "CH", angle: 200, ring: 1 },
-  { id: 4, label: "Lawyer",       initials: "LW", angle: 300, ring: 3 },
-  { id: 5, label: "Developer",    initials: "DE", angle: 70,  ring: 3 },
-  { id: 6, label: "Tailor",       initials: "TA", angle: 160, ring: 2 },
-  { id: 7, label: "Doctor",       initials: "DR", angle: 250, ring: 3 },
-  { id: 8, label: "Builder",      initials: "BU", angle: 340, ring: 2 },
+  { id: 1,  label: "I need a Lawyer",   angle: 20,  ring: 1 },
+  { id: 2,  label: "Need Electrician",  angle: 95,  ring: 2 },
+  { id: 3,  label: "I need a Chef",     angle: 185, ring: 3 },
+  { id: 4,  label: "Need Accountant",   angle: 268, ring: 4 },
+  { id: 5,  label: "Need Developer",    angle: 55,  ring: 5 },
+  { id: 6,  label: "I need a Tailor",   angle: 148, ring: 2 },
+  { id: 7,  label: "Customer Service",  angle: 232, ring: 3 },
+  { id: 8,  label: "I need Plumber",    angle: 318, ring: 4 },
+  { id: 9,  label: "Need a Driver",     angle: 128, ring: 5 },
+  { id: 10, label: "Need Security",     angle: 300, ring: 1 },
 ];
 
-// ── 2-D Radar ────────────────────────────────────────────────────────────────
+// ── 2-D Radar ─────────────────────────────────────────────────────────────────
 function Radar2D() {
   const [sweep,   setSweep  ] = useState<number>(0);
   const [visible, setVisible] = useState<number[]>([]);
-  const rafRef  = useRef<number>(0);
-  const t0Ref   = useRef<number | null>(null);
+  const rafRef = useRef<number>(0);
+  const t0Ref  = useRef<number | null>(null);
 
   useEffect(() => {
     const tick = (ts: number) => {
       if (!t0Ref.current) t0Ref.current = ts;
-      const deg = ((ts - t0Ref.current) * 0.04) % 360;
+      const deg = ((ts - t0Ref.current) * 0.038) % 360;
       setSweep(deg);
       setVisible(prev => {
         const s = new Set(prev);
-        DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 40) s.add(d.id); });
+        DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 42) s.add(d.id); });
         return Array.from(s);
       });
       rafRef.current = requestAnimationFrame(tick);
@@ -47,35 +48,39 @@ function Radar2D() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  const cx = 150, cy = 150, rings = [42, 78, 118];
+  const cx = 170, cy = 170;
+  const rings = [32, 57, 82, 106, 130];
+  const outerR = 138;
   const sRad = (sweep * Math.PI) / 180;
+  const PW = 78, PH = 18;
 
   return (
-    <svg width="300" height="300" viewBox="0 0 300 300" style={{ display: "block" }}>
+    <svg width="340" height="340" viewBox="0 0 340 340" style={{ display: "block" }}>
       <defs>
-        <radialGradient id="bg2" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor={G.dark} stopOpacity="0.06" />
+        <radialGradient id="bg2d" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stopColor={G.dark} stopOpacity="0.07" />
           <stop offset="100%" stopColor={G.dark} stopOpacity="0.01" />
         </radialGradient>
-        <clipPath id="clip2"><circle cx={cx} cy={cy} r="122" /></clipPath>
+        <clipPath id="clip2d"><circle cx={cx} cy={cy} r={outerR} /></clipPath>
       </defs>
 
-      <circle cx={cx} cy={cy} r="122" fill="url(#bg2)" stroke={G.dark} strokeOpacity="0.08" strokeWidth="1" />
+      <circle cx={cx} cy={cy} r={outerR} fill="url(#bg2d)" stroke={G.dark} strokeOpacity="0.08" strokeWidth="1" />
 
       {rings.map((r, i) => (
         <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={G.dark} strokeOpacity="0.10" strokeWidth="1" strokeDasharray="4 6" />
       ))}
+
       {[0, 90, 180, 270].map(a => {
         const rd = (a * Math.PI) / 180;
-        return <line key={a} x1={cx} y1={cy} x2={cx + Math.cos(rd) * 122} y2={cy + Math.sin(rd) * 122} stroke={G.dark} strokeOpacity="0.07" strokeWidth="1" />;
+        return <line key={a} x1={cx} y1={cy} x2={cx + Math.cos(rd) * outerR} y2={cy + Math.sin(rd) * outerR} stroke={G.dark} strokeOpacity="0.07" strokeWidth="1" />;
       })}
 
-      <g clipPath="url(#clip2)">
-        {[...Array(55)].map((_, i) => {
+      <g clipPath="url(#clip2d)">
+        {Array.from({ length: 55 }).map((_, i) => {
           const rd = ((sweep - i * 0.75) * Math.PI) / 180;
-          return <line key={i} x1={cx} y1={cy} x2={cx + Math.cos(rd) * 122} y2={cy + Math.sin(rd) * 122} stroke={G.teal} strokeOpacity={(1 - i / 55) * 0.22} strokeWidth="2" />;
+          return <line key={i} x1={cx} y1={cy} x2={cx + Math.cos(rd) * outerR} y2={cy + Math.sin(rd) * outerR} stroke={G.teal} strokeOpacity={(1 - i / 55) * 0.22} strokeWidth="2" />;
         })}
-        <line x1={cx} y1={cy} x2={cx + Math.cos(sRad) * 122} y2={cy + Math.sin(sRad) * 122} stroke={G.teal} strokeOpacity="0.85" strokeWidth="1.5" />
+        <line x1={cx} y1={cy} x2={cx + Math.cos(sRad) * outerR} y2={cy + Math.sin(sRad) * outerR} stroke={G.teal} strokeOpacity="0.85" strokeWidth="1.5" />
       </g>
 
       {DOTS.map(d => {
@@ -85,31 +90,36 @@ function Radar2D() {
         const py  = cy + Math.sin(rad) * r;
         const vis = visible.includes(d.id);
         return (
-          <g key={d.id} transform={`translate(${px},${py})`} style={{ opacity: vis ? 1 : 0, transition: "opacity 0.5s" }}>
-            <circle r="15" fill="white" stroke={G.teal} strokeWidth="1.5" filter="drop-shadow(0 2px 6px rgba(0,0,0,0.10))" />
-            <text textAnchor="middle" dominantBaseline="central" fontSize="7" fontWeight="700" fill={G.mid} fontFamily="'DM Mono', monospace">{d.initials}</text>
+          <g key={d.id} style={{ opacity: vis ? 1 : 0, transition: "opacity 0.5s" }}>
+            <rect x={px - PW / 2} y={py - PH / 2} width={PW} height={PH} rx={PH / 2}
+              fill="white" stroke={G.teal} strokeWidth="1.2"
+              filter="drop-shadow(0 2px 5px rgba(0,0,0,0.09))" />
+            <text x={px} y={py} textAnchor="middle" dominantBaseline="central"
+              fontSize="6.2" fontWeight="600" fill={G.mid} fontFamily="'DM Mono', monospace">
+              {d.label}
+            </text>
             {vis && (
-              <circle r="15" fill="none" stroke={G.teal} strokeWidth="1" strokeOpacity="0.4">
-                <animate attributeName="r" from="15" to="28" dur="1.8s" repeatCount="indefinite" />
+              <ellipse cx={px} cy={py} rx={PW / 2} ry={PH / 2} fill="none" stroke={G.teal} strokeWidth="1">
+                <animate attributeName="rx" from={String(PW / 2)} to={String(PW / 2 + 10)} dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="ry" from={String(PH / 2)} to={String(PH / 2 + 6)}  dur="1.8s" repeatCount="indefinite" />
                 <animate attributeName="stroke-opacity" from="0.4" to="0" dur="1.8s" repeatCount="indefinite" />
-              </circle>
+              </ellipse>
             )}
           </g>
         );
       })}
 
-      {/* YOU */}
-      <circle cx={cx} cy={cy} r="18" fill={G.dark} />
+      <circle cx={cx} cy={cy} r="20" fill={G.dark} />
       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight="700" fill="white" fontFamily="'DM Mono', monospace">YOU</text>
-      <circle cx={cx} cy={cy} r="18" fill="none" stroke={G.teal} strokeWidth="1.5">
-        <animate attributeName="r" from="18" to="34" dur="2.2s" repeatCount="indefinite" />
+      <circle cx={cx} cy={cy} r="20" fill="none" stroke={G.teal} strokeWidth="1.5">
+        <animate attributeName="r" from="20" to="36" dur="2.2s" repeatCount="indefinite" />
         <animate attributeName="stroke-opacity" from="0.7" to="0" dur="2.2s" repeatCount="indefinite" />
       </circle>
     </svg>
   );
 }
 
-// ── 3-D Radar ────────────────────────────────────────────────────────────────
+// ── 3-D Radar ─────────────────────────────────────────────────────────────────
 function Radar3D() {
   const [sweep,   setSweep  ] = useState<number>(0);
   const [visible, setVisible] = useState<number[]>([]);
@@ -119,11 +129,11 @@ function Radar3D() {
   useEffect(() => {
     const tick = (ts: number) => {
       if (!t0Ref.current) t0Ref.current = ts;
-      const deg = ((ts - t0Ref.current) * 0.04) % 360;
+      const deg = ((ts - t0Ref.current) * 0.038) % 360;
       setSweep(deg);
       setVisible(prev => {
         const s = new Set(prev);
-        DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 40) s.add(d.id); });
+        DOTS.forEach(d => { if (((deg - d.angle + 360) % 360) < 42) s.add(d.id); });
         return Array.from(s);
       });
       rafRef.current = requestAnimationFrame(tick);
@@ -132,37 +142,40 @@ function Radar3D() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  const cx = 150, cy = 168, sY = 0.44, rings = [40, 75, 112];
+  const cx = 170, cy = 188, sY = 0.42;
+  const rings = [30, 54, 78, 100, 122];
+  const outerR = rings[4];
+  const CW = 74, CH = 18;
 
   const to3D = (angle: number, r: number) => {
     const rd = (angle * Math.PI) / 180;
     return { x: Math.cos(rd) * r, y: Math.sin(rd) * r * sY };
   };
 
-  const sEnd = to3D(sweep, rings[2]);
+  const sEnd = to3D(sweep, outerR);
 
   return (
-    <svg width="300" height="300" viewBox="0 0 300 300" style={{ display: "block" }}>
+    <svg width="340" height="330" viewBox="0 0 340 330" style={{ display: "block" }}>
       <defs>
-        <radialGradient id="floor3" cx="50%" cy="60%" r="50%">
+        <radialGradient id="floor3d" cx="50%" cy="60%" r="50%">
           <stop offset="0%"   stopColor={G.dark} stopOpacity="0.10" />
           <stop offset="100%" stopColor={G.dark} stopOpacity="0.01" />
         </radialGradient>
       </defs>
 
-      <ellipse cx={cx} cy={cy} rx={rings[2] + 10} ry={(rings[2] + 10) * sY} fill="url(#floor3)" />
+      <ellipse cx={cx} cy={cy} rx={outerR + 10} ry={(outerR + 10) * sY} fill="url(#floor3d)" />
 
       {rings.map((r, i) => (
-        <ellipse key={i} cx={cx} cy={cy} rx={r} ry={r * sY} fill="none" stroke={G.dark} strokeOpacity="0.14" strokeWidth="1" strokeDasharray="4 5" />
+        <ellipse key={i} cx={cx} cy={cy} rx={r} ry={r * sY} fill="none" stroke={G.dark} strokeOpacity="0.13" strokeWidth="1" strokeDasharray="4 5" />
       ))}
 
       {[0, 60, 120, 180, 240, 300].map(a => {
-        const p = to3D(a, rings[2]);
+        const p = to3D(a, outerR);
         return <line key={a} x1={cx} y1={cy} x2={cx + p.x} y2={cy + p.y} stroke={G.dark} strokeOpacity="0.08" strokeWidth="1" />;
       })}
 
-      {[...Array(50)].map((_, i) => {
-        const e = to3D(sweep - i, rings[2]);
+      {Array.from({ length: 50 }).map((_, i) => {
+        const e = to3D(sweep - i, outerR);
         return <line key={i} x1={cx} y1={cy} x2={cx + e.x} y2={cy + e.y} stroke={G.teal} strokeOpacity={(1 - i / 50) * 0.25} strokeWidth="2" />;
       })}
       <line x1={cx} y1={cy} x2={cx + sEnd.x} y2={cy + sEnd.y} stroke={G.teal} strokeOpacity="0.9" strokeWidth="2" />
@@ -171,18 +184,23 @@ function Radar3D() {
         const r   = rings[d.ring - 1];
         const pos = to3D(d.angle, r);
         const bx  = cx + pos.x, by = cy + pos.y;
-        const pH  = 24 + d.ring * 8;
+        const pH  = 20 + d.ring * 7;
         const vis = visible.includes(d.id);
         return (
           <g key={d.id} style={{ opacity: vis ? 1 : 0, transition: "opacity 0.5s" }}>
-            <line x1={bx} y1={by} x2={bx} y2={by - pH} stroke={G.teal} strokeOpacity="0.25" strokeWidth="1" strokeDasharray="2 3" />
-            <ellipse cx={bx} cy={by} rx="5" ry="2.5" fill={G.teal} fillOpacity="0.25" />
-            <rect x={bx - 18} y={by - pH - 16} width="36" height="16" rx="4" fill="white" stroke={G.teal} strokeWidth="1.2" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.12))" />
-            <text x={bx} y={by - pH - 8} textAnchor="middle" dominantBaseline="central" fontSize="7" fontWeight="700" fill={G.mid} fontFamily="'DM Mono', monospace">{d.initials}</text>
+            <line x1={bx} y1={by} x2={bx} y2={by - pH} stroke={G.teal} strokeOpacity="0.22" strokeWidth="1" strokeDasharray="2 3" />
+            <ellipse cx={bx} cy={by} rx="5" ry="2.5" fill={G.teal} fillOpacity="0.22" />
+            <rect x={bx - CW / 2} y={by - pH - CH} width={CW} height={CH} rx="5"
+              fill="white" stroke={G.teal} strokeWidth="1.2"
+              filter="drop-shadow(0 2px 8px rgba(0,0,0,0.11))" />
+            <text x={bx} y={by - pH - CH / 2} textAnchor="middle" dominantBaseline="central"
+              fontSize="6.2" fontWeight="600" fill={G.mid} fontFamily="'DM Mono', monospace">
+              {d.label}
+            </text>
             {vis && (
               <ellipse cx={bx} cy={by} rx="5" ry="2.5" fill="none" stroke={G.teal} strokeWidth="1">
-                <animate attributeName="rx" from="5" to="18" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="ry" from="2.5" to="8" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="rx" from="5"   to="20" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="ry" from="2.5" to="9"  dur="1.8s" repeatCount="indefinite" />
                 <animate attributeName="stroke-opacity" from="0.6" to="0" dur="1.8s" repeatCount="indefinite" />
               </ellipse>
             )}
@@ -190,87 +208,50 @@ function Radar3D() {
         );
       })}
 
-      {/* YOU */}
-      <line x1={cx} y1={cy} x2={cx} y2={cy - 38} stroke={G.dark} strokeWidth="2" strokeOpacity="0.4" />
-      <ellipse cx={cx} cy={cy} rx="10" ry="4.5" fill={G.dark} fillOpacity="0.2" />
-      <rect x={cx - 20} y={cy - 56} width="40" height="18" rx="5" fill={G.dark} />
-      <text x={cx} y={cy - 47} textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight="700" fill="white" fontFamily="'DM Mono', monospace">YOU</text>
-
-      <text x={cx} y={cy + (rings[2] * sY) + 16} textAnchor="middle" fontSize="8" fill={G.dark} fillOpacity="0.35" fontFamily="'DM Mono', monospace" letterSpacing="1">GPS PROXIMITY</text>
+      <line x1={cx} y1={cy} x2={cx} y2={cy - 40} stroke={G.dark} strokeWidth="2" strokeOpacity="0.4" />
+      <ellipse cx={cx} cy={cy} rx="10" ry="4.5" fill={G.dark} fillOpacity="0.18" />
+      <rect x={cx - 20} y={cy - 58} width="40" height="18" rx="5" fill={G.dark} />
+      <text x={cx} y={cy - 49} textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight="700" fill="white" fontFamily="'DM Mono', monospace">YOU</text>
+      <text x={cx} y={cy + (outerR * sY) + 18} textAnchor="middle" fontSize="7.5" fill={G.dark} fillOpacity="0.30" fontFamily="'DM Mono', monospace" letterSpacing="1">GPS PROXIMITY</text>
     </svg>
   );
 }
 
-// ── Problems section data ────────────────────────────────────────────────────
+// ── Problems section ──────────────────────────────────────────────────────────
 const PROBLEMS = [
-  {
-    n: "01",
-    title: "Jobs closer to home",
-    body: "Get matched with clients and companies near you — less commute, lower cost, more work done.",
-  },
-  {
-    n: "02",
-    title: "People find you automatically",
-    body: "Anyone in your area searching for your skill sees you first. No chasing, no ads.",
-  },
-  {
-    n: "03",
-    title: "Direct payments, zero cuts",
-    body: "Clients pay you straight. We never touch your money or take a commission.",
-  },
+  { n: "01", title: "Jobs closer to home",          body: "Get matched with clients and companies near you — less commute, lower cost, more work done." },
+  { n: "02", title: "People find you automatically", body: "Anyone in your area searching for your skill sees you first. No chasing, no ads." },
+  { n: "03", title: "Direct payments, zero cuts",    body: "Clients pay you straight. We never touch your money or take a commission." },
 ];
 
-// ── Hero ─────────────────────────────────────────────────────────────────────
+// ── Hero ──────────────────────────────────────────────────────────────────────
 export function Hero() {
-  const [mode, setMode] = useState("2d");
+  const [mode, setMode] = useState<string>("3d");
 
   return (
     <div style={{ fontFamily: "'DM Sans', Georgia, sans-serif", background: G.bg, minHeight: "100vh" }}>
 
-      {/* ── HERO ROW ──────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", flexWrap: "wrap",
-        maxWidth: 1080, margin: "0 auto",
-        padding: "60px 32px 40px",
-        alignItems: "center", gap: 40,
-      }}>
+      <div style={{ display: "flex", flexWrap: "wrap", maxWidth: 1100, margin: "0 auto", padding: "60px 32px 40px", alignItems: "center", gap: 40 }}>
 
-        {/* LEFT — text */}
-        <div style={{ flex: "1 1 300px", maxWidth: 420 }}>
-          <p style={{
-            fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase",
-            color: G.teal, fontWeight: 600, marginBottom: 14,
-            fontFamily: "'DM Mono', monospace",
-          }}>
-            Here's exactly how
+        {/* LEFT */}
+        <div style={{ flex: "1 1 300px", maxWidth: 400 }}>
+          <p style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: G.teal, fontWeight: 600, marginBottom: 12, fontFamily: "'DM Mono', monospace" }}>
+            Your opportunity buddy.
           </p>
-
-          <h1 style={{
-            fontSize: "clamp(26px, 4vw, 42px)",
-            fontWeight: 800, color: G.dark,
-            lineHeight: 1.18, margin: "0 0 20px",
-            letterSpacing: "-0.02em",
-          }}>
-            You find artisans, companies & employees — using your GPS.
+          <h1 style={{ fontSize: "clamp(21px, 3.2vw, 34px)", fontWeight: 800, color: G.dark, lineHeight: 1.2, margin: "0 0 16px", letterSpacing: "-0.02em", textAlign: "left" }}>
+            Get unlimited job calls and employment opportunities.
           </h1>
-
-          <p style={{
-            fontSize: 14, color: "#6b7c74",
-            lineHeight: 1.65, margin: "0 0 32px",
-            fontWeight: 400,
-          }}>
-            Proximity-first discovery. Whoever is nearest shows up first — for both sides.
+          <p style={{ fontSize: 13.5, color: "#6b7c74", lineHeight: 1.65, margin: "0 0 30px", fontWeight: 400 }}>
+            Get that job with accommodation and feeding in Lagos — apply within.
           </p>
 
-          {/* 2D / 3D toggle — left side */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: "#9aada4", fontFamily: "'DM Mono', monospace", letterSpacing: "0.06em" }}>VIEW</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 10, color: "#9aada4", fontFamily: "'DM Mono', monospace", letterSpacing: "0.08em" }}>VIEW</span>
             <div style={{ display: "flex", background: "#e4ede8", borderRadius: 99, padding: 3, gap: 2 }}>
-              {["2d", "3d"].map(m => (
+              {(["3d", "2d"] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)} style={{
-                  padding: "5px 18px", borderRadius: 99, border: "none",
-                  cursor: "pointer", fontFamily: "'DM Mono', monospace",
-                  fontWeight: 700, fontSize: 11, letterSpacing: "0.05em",
+                  padding: "5px 18px", borderRadius: 99, border: "none", cursor: "pointer",
+                  fontFamily: "'DM Mono', monospace", fontWeight: 700, fontSize: 11, letterSpacing: "0.05em",
                   background: mode === m ? G.dark : "transparent",
                   color:      mode === m ? "white" : G.mid,
                   transition: "all 0.2s",
@@ -283,53 +264,26 @@ export function Hero() {
         </div>
 
         {/* RIGHT — radar */}
-        <div style={{ flex: "1 1 300px", display: "flex", justifyContent: "center" }}>
-          <div style={{
-            background: "white", borderRadius: 24,
-            padding: 20,
-            boxShadow: "0 4px 40px rgba(26,61,43,0.07)",
-            border: "1px solid #e4ede8",
-          }}>
+        <div style={{ flex: "1 1 340px", display: "flex", justifyContent: "center" }}>
+          <div style={{ background: "white", borderRadius: 24, padding: 16, boxShadow: "0 4px 40px rgba(26,61,43,0.07)", border: "1px solid #e4ede8" }}>
             {mode === "2d" ? <Radar2D /> : <Radar3D />}
           </div>
         </div>
       </div>
 
-      {/* ── PROBLEMS ROW ──────────────────────────────────────────────── */}
-      <div style={{
-        maxWidth: 1080, margin: "0 auto",
-        padding: "0 32px 80px",
-      }}>
-        {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 40 }}>
+      {/* PROBLEMS */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px 80px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
           <div style={{ flex: 1, height: 1, background: "#e4ede8" }} />
-          <span style={{ fontSize: 11, color: "#9aada4", letterSpacing: "0.12em", fontFamily: "'DM Mono', monospace" }}>PROBLEMS WE SOLVE</span>
+          <span style={{ fontSize: 10, color: "#9aada4", letterSpacing: "0.12em", fontFamily: "'DM Mono', monospace" }}>PROBLEMS WE SOLVE</span>
           <div style={{ flex: 1, height: 1, background: "#e4ede8" }} />
         </div>
-
-        {/* Cards */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
           {PROBLEMS.map(p => (
-            <div key={p.n} style={{
-              flex: "1 1 260px",
-              background: "white",
-              border: "1px solid #e4ede8",
-              borderRadius: 16,
-              padding: "28px 28px 26px",
-            }}>
-              <span style={{
-                display: "inline-block",
-                fontSize: 10, fontWeight: 700,
-                color: G.teal, letterSpacing: "0.10em",
-                fontFamily: "'DM Mono', monospace",
-                marginBottom: 12,
-              }}>{p.n}</span>
-              <h3 style={{
-                fontSize: 15, fontWeight: 700,
-                color: G.dark, margin: "0 0 8px",
-                letterSpacing: "-0.01em",
-              }}>{p.title}</h3>
-              <p style={{ fontSize: 13, color: "#7a8f86", lineHeight: 1.6, margin: 0 }}>{p.body}</p>
+            <div key={p.n} style={{ flex: "1 1 250px", background: "white", border: "1px solid #e4ede8", borderRadius: 16, padding: "26px 26px 24px" }}>
+              <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: G.teal, letterSpacing: "0.10em", fontFamily: "'DM Mono', monospace", marginBottom: 10 }}>{p.n}</span>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: G.dark, margin: "0 0 7px", letterSpacing: "-0.01em" }}>{p.title}</h3>
+              <p style={{ fontSize: 12.5, color: "#7a8f86", lineHeight: 1.6, margin: 0 }}>{p.body}</p>
             </div>
           ))}
         </div>
