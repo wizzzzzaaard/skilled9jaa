@@ -221,7 +221,7 @@ const PROBLEMS = [
 ];
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
-export default function Hero() {
+export function Hero() {
   const [mode, setMode] = useState("2d");
 
   return (
