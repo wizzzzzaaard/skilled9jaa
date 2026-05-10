@@ -259,7 +259,7 @@ export function Hero() {
             color: G.teal, fontWeight: 600, marginBottom: 12,
             fontFamily: "monospace",
           }}>
-            Your opportunity buddy.
+      Here is how it works for artisan/employees.
           </p>
           <h1 style={{
             fontSize: "clamp(21px, 3.2vw, 34px)",
@@ -267,7 +267,7 @@ export function Hero() {
             lineHeight: 1.2, margin: "0 0 14px",
             letterSpacing: "-0.02em",
           }}>
-            Get unlimited job calls and employment opportunities.
+            you find businesses closest to you based on your location,you find nearest artisans to you in realtime based on your location as well.
           </h1>
           <p style={{ fontSize: 13.5, color: "#6b7c74", lineHeight: 1.65, margin: "0 0 28px" }}>
             Get that job with accommodation and feeding in Lagos — apply within.
