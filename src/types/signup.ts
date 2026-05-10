@@ -1,4 +1,4 @@
-export type Step = "basic" | "role" | "setup" | "hs_services" | "hs_plan" | "skills" | "payment" | "pending" | "success";
+export type Step = "intro" | "basic" | "role" | "setup" | "hs_services" | "hs_plan" | "skills" | "payment" | "pending" | "success";
 
 export interface BankDetails {
   bank_name: string;
