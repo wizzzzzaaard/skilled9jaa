@@ -12,6 +12,14 @@ const GREEN_RGBA  = "27,67,50";
 const R_BASE      = 13;
 const R_HOV       = 17;
 
+const GREEN_SHADES = ["#d8f3dc", "#b7e4c7", "#95d5b2", "#74c69d", "#52b788", "#40916c"];
+
+function getGreenShade(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GREEN_SHADES[hash % GREEN_SHADES.length];
+}
+
 interface PlacedDot {
   profile: RadarProfile;
   groundX: number;
@@ -150,9 +158,9 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
       } else {
         ctx.beginPath();
         ctx.arc(px, py, radius - 1, 0, Math.PI * 2);
-        ctx.fillStyle = profile.is_company ? GREEN : "#F3F4F6";
+        ctx.fillStyle = profile.is_company ? GREEN : getGreenShade(id);
         ctx.fill();
-        ctx.fillStyle    = profile.is_company ? "#fff" : GREEN;
+        ctx.fillStyle    = "#fff";
         ctx.font         = `700 ${Math.max(7, Math.floor(radius * 0.5))}px system-ui, sans-serif`;
         ctx.textAlign    = "center";
         ctx.textBaseline = "middle";
@@ -162,11 +170,10 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
 
       ctx.beginPath();
       ctx.arc(px, py, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = isHov ? GREEN : "rgba(229,231,235,1)";
+      ctx.strokeStyle = isHov ? GREEN : `rgba(${GREEN_RGBA},0.20)`;
       ctx.lineWidth   = isHov ? 2.5 : 1.5;
       ctx.stroke();
 
-      // name label — 15% smaller
       const displayName = profile.company_name || profile.full_name || "?";
       const shortName   = displayName.length > 12 ? displayName.slice(0, 11) + "…" : displayName;
       ctx.fillStyle    = "#111827";
@@ -175,7 +182,6 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
       ctx.textBaseline = "alphabetic";
       ctx.fillText(shortName, px, py + radius + 11);
 
-      // distance label — 15% smaller
       const dist = profile.distance_km < 1
         ? `${(profile.distance_km * 1000).toFixed(0)}m`
         : `${profile.distance_km.toFixed(1)} km`;
@@ -197,7 +203,6 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
       const cy   = H / 2;
       const maxR = Math.min(W, H) * 0.44;
 
-      // background
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 1.1);
       bg.addColorStop(0, "#F9FAFB");
       bg.addColorStop(1, "#F3F4F6");
@@ -206,7 +211,6 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
       ctx.fillStyle = bg;
       ctx.fill();
 
-      // 3D elliptical rings
       RING_RATIOS.forEach((ratio, i) => {
         const rx = ratio * maxR;
         const ry = rx * TILT;
@@ -221,7 +225,7 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
         ctx.fillText(RING_LABELS[i], cx + rx + 4, cy - ry * 0.05);
       });
 
-      // sweep scaled to ellipse
+      // 3D sweep
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(t % (Math.PI * 2));
@@ -237,7 +241,7 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
       ctx.fill();
       ctx.restore();
 
-      // dots — painter's sort back-to-front
+      // Painter's sort back-to-front
       const sorted = [...dotsRef.current].sort((a, b) => a.groundY - b.groundY);
       const drawn: { id: string; px: number; py: number }[] = [];
 
@@ -249,13 +253,13 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
         const isHov  = dp.profile.id === hovRef.current;
         const radius = isHov ? R_HOV : R_BASE;
 
-        // ground shadow
+        // Ground shadow
         ctx.beginPath();
         ctx.ellipse(dp.groundX, dp.groundY, 9, 3, 0, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(0,0,0,0.05)";
         ctx.fill();
 
-        // stem
+        // Stem
         ctx.beginPath();
         ctx.moveTo(dp.groundX, dp.groundY);
         ctx.lineTo(px, py + radius);
@@ -267,8 +271,6 @@ export function RadarMap3D({ profiles, onSelect }: RadarMap3DProps) {
         drawn.push({ id: dp.profile.id, px, py });
       });
       drawnRef.current = drawn;
-
-      // no "You" dot in 3D mode
 
       rafRef.current = requestAnimationFrame(draw);
     }
