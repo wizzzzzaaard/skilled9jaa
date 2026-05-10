@@ -26,13 +26,13 @@ const DOTS = [
 
 // ── 2-D Radar ────────────────────────────────────────────────────────────────
 function Radar2D() {
-  const [sweep,   setSweep  ] = useState(0);
-  const [visible, setVisible] = useState([]);
-  const rafRef  = useRef();
-  const t0Ref   = useRef(null);
+  const [sweep,   setSweep  ] = useState<number>(0);
+  const [visible, setVisible] = useState<number[]>([]);
+  const rafRef  = useRef<number>(0);
+  const t0Ref   = useRef<number | null>(null);
 
   useEffect(() => {
-    const tick = (ts) => {
+    const tick = (ts: number) => {
       if (!t0Ref.current) t0Ref.current = ts;
       const deg = ((ts - t0Ref.current) * 0.04) % 360;
       setSweep(deg);
@@ -111,13 +111,13 @@ function Radar2D() {
 
 // ── 3-D Radar ────────────────────────────────────────────────────────────────
 function Radar3D() {
-  const [sweep,   setSweep  ] = useState(0);
-  const [visible, setVisible] = useState([]);
-  const rafRef = useRef();
-  const t0Ref  = useRef(null);
+  const [sweep,   setSweep  ] = useState<number>(0);
+  const [visible, setVisible] = useState<number[]>([]);
+  const rafRef = useRef<number>(0);
+  const t0Ref  = useRef<number | null>(null);
 
   useEffect(() => {
-    const tick = (ts) => {
+    const tick = (ts: number) => {
       if (!t0Ref.current) t0Ref.current = ts;
       const deg = ((ts - t0Ref.current) * 0.04) % 360;
       setSweep(deg);
