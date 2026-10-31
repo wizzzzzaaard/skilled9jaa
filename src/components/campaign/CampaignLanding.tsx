@@ -39,7 +39,8 @@ export function CampaignLanding({ campaign, openJobs }: { campaign: Campaign; op
         </div>
       </header>
 
-      <main>
+      {/* The site layout already provides <main>; a second one confuses screen readers. */}
+      <div>
         <section className={s.wrap}>
           <div className={s.hero}>
             <div>
@@ -118,7 +119,7 @@ export function CampaignLanding({ campaign, openJobs }: { campaign: Campaign; op
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       <footer className={`${s.wrap} ${s.foot}`}>
         {c.note && <p>{c.note}</p>}

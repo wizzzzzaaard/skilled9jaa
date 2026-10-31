@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { isCampaignPath } from "@/lib/campaigns";
+import { hidesSiteChrome } from "@/lib/layout";
 
 export function Footer() {
   const pathname = usePathname();
@@ -16,7 +16,7 @@ export function Footer() {
     { label: "Post a Job", href: "/jobs/post" },
   ];
 
-  if (isCampaignPath(pathname)) return null;
+  if (hidesSiteChrome(pathname)) return null;
 
   return (
     <footer className="border-t border-gray-100 bg-white">

@@ -1,148 +1,101 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import type { Skill } from "@/types/signup";
+import { useMemo, useState } from "react";
+import type { SignupState } from "@/lib/hooks/useSignup";
+import s from "../flow.module.css";
 
-interface Props {
-  availableSkills: Skill[];
-  skillsLoading: boolean;
-  skillFilter: "ALL" | "SKILL" | "JOB";
-  setSkillFilter: (v: "ALL" | "SKILL" | "JOB") => void;
-  selectedSkillIds: number[];
-  toggleSkill: (id: number) => void;
-  isLoading: boolean;
-  handleSkillsSubmit: () => void;
-  setStep: (s: any) => void;
-}
+type Filter = "ALL" | "SKILL" | "JOB";
 
-export function SkillsStep({
-  availableSkills,
-  skillsLoading,
-  skillFilter,
-  setSkillFilter,
-  selectedSkillIds,
-  toggleSkill,
-  isLoading,
-  handleSkillsSubmit,
-  setStep,
-}: Props) {
-  const [search, setSearch] = useState("");
+export function SkillsStep({ s: f }: { s: SignupState }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("ALL");
 
-  const filtered = availableSkills.filter((s) => {
-    const matchesFilter = skillFilter === "ALL" || s.type === skillFilter;
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const chosen = useMemo(() => f.availableSkills.filter((sk) => f.selectedSkillIds.includes(sk.id)), [f.availableSkills, f.selectedSkillIds]);
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return f.availableSkills
+      .filter((sk) => (filter === "ALL" || sk.type === filter) && (!q || sk.name.toLowerCase().includes(q)) && !f.selectedSkillIds.includes(sk.id))
+      .slice(0, q ? 60 : 40);
+  }, [f.availableSkills, f.selectedSkillIds, query, filter]);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-text-primary mb-1">
-        What do you offer?
-      </h2>
-      <p className="text-sm text-text-secondary mb-1">
-        Select up to 3 skills or job roles. Skills make you discoverable to
-        clients. Job roles make you visible to employers.
-      </p>
-      <div className="bg-surface rounded-xl p-3 text-xs text-text-secondary mb-2">
-        <span className="font-semibold text-text-primary">Tip:</span> Selecting
-        a Job type skill lists you as an employee available for hire. Selecting
-        a Skill type lists you as an artisan. You can select both.
+    <section className={s.card} aria-labelledby="skills-title">
+      <h1 className={s.title} id="skills-title">
+        What do you do?
+      </h1>
+      <p className={s.sub}>Pick up to 3. Trade skills help clients find you; job roles help employers find you.</p>
+
+      <div className={s.stack}>
+        <div aria-live="polite">
+          <p className={s.counter}>
+            <b>{f.selectedSkillIds.length}</b> of 3 chosen
+          </p>
+          {chosen.length > 0 && (
+            <ul className={s.chips} style={{ marginTop: "0.5rem" }} aria-label="Chosen">
+              {chosen.map((sk) => (
+                <li key={sk.id}>
+                  <button type="button" className={s.chip} aria-pressed="true" onClick={() => f.toggleSkill(sk.id)} aria-label={`Remove ${sk.name}`}>
+                    {sk.name} <span aria-hidden="true">✕</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className={s.field}>
+          <label htmlFor="skill-search">Search</label>
+          <input id="skill-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Plumbing, cashier, web design…" autoComplete="off" />
+        </div>
+
+        <div className={s.tabs} role="group" aria-label="Show">
+          {(["ALL", "SKILL", "JOB"] as Filter[]).map((k) => (
+            <button key={k} type="button" className={s.chip} aria-pressed={filter === k} onClick={() => setFilter(k)}>
+              {k === "ALL" ? "All" : k === "SKILL" ? "Trade skills" : "Job roles"}
+            </button>
+          ))}
+        </div>
+
+        {f.skillsLoading ? (
+          <p className={s.loading} role="status">Loading skills…</p>
+        ) : shown.length === 0 ? (
+          <p className={s.hint}>
+            {query ? `Nothing matches "${query}". Try a shorter word.` : "No more skills in this group."}
+          </p>
+        ) : (
+          <div className={s.list}>
+            <ul className={s.chips}>
+              {shown.map((sk) => (
+                <li key={sk.id}>
+                  <button type="button" className={s.chip} aria-pressed="false" onClick={() => f.toggleSkill(sk.id)} disabled={f.selectedSkillIds.length >= 3}>
+                    {sk.name} <span className={s.chipType}>{sk.type === "JOB" ? "Job" : "Trade"}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {f.skillsError && (
+          <p className={s.alert} role="alert">
+            {f.skillsError}
+          </p>
+        )}
+        {f.formError && (
+          <p className={s.alert} role="alert">
+            {f.formError.text}
+          </p>
+        )}
       </div>
 
-      {/* Search */}
-      <Input
-        placeholder="Search skills or job roles..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {(["ALL", "SKILL", "JOB"] as const).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setSkillFilter(filter)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              skillFilter === filter
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-text-secondary hover:bg-gray-200"
-            }`}
-          >
-            {filter === "ALL" ? "All" : filter === "SKILL" ? "Artisan Skills" : "Job Roles"}
-          </button>
-        ))}
-      </div>
-
-      {/* Selected pills */}
-      {selectedSkillIds.length > 0 && (
-        <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
-          {availableSkills
-            .filter((s) => selectedSkillIds.includes(s.id))
-            .map((s) => (
-              <span
-                key={s.id}
-                onClick={() => toggleSkill(s.id)}
-                className="flex items-center gap-1 px-3 py-1 bg-primary text-white text-xs font-medium rounded-full cursor-pointer"
-              >
-                {s.name} ×
-              </span>
-            ))}
-        </div>
-      )}
-
-      <p className="text-xs text-text-secondary">{selectedSkillIds.length}/3 selected</p>
-
-      {skillsLoading ? (
-        <div className="text-center py-8 text-text-secondary text-sm">Loading skills...</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-8 text-text-secondary text-sm">
-          No results for "{search}"
-        </div>
-      ) : (
-        <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
-          {filtered.map((skill) => {
-            const selected = selectedSkillIds.includes(skill.id);
-            return (
-              <button
-                key={skill.id}
-                onClick={() => toggleSkill(skill.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all text-left ${
-                  selected
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-100 hover:border-gray-200"
-                }`}
-              >
-                <span className="text-sm text-text-primary">{skill.name}</span>
-                <span
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    skill.type === "SKILL"
-                      ? "bg-accent/20 text-accent"
-                      : "bg-blue-50 text-blue-600"
-                  }`}
-                >
-                  {skill.type === "SKILL" ? "Artisan" : "Job Role"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="flex-1" onClick={() => setStep("setup")}>
+      <div className={s.actions}>
+        <button type="button" className={s.secondary} onClick={f.goBack}>
           Back
-        </Button>
-        <Button
-          variant="primary"
-          className="flex-1"
-          isLoading={isLoading}
-          onClick={handleSkillsSubmit}
-        >
-          Continue to Payment →
-        </Button>
+        </button>
+        <button type="button" className={s.primary} onClick={f.handleSkillsSubmit} disabled={f.isLoading} aria-busy={f.isLoading}>
+          {f.isLoading ? "Saving…" : f.isPaidRole ? "Next: payment" : "Finish"}
+        </button>
       </div>
-    </div>
+    </section>
   );
 }

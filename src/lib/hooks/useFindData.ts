@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocationStore } from "@/store/locationStore";
-import { haversine, nearestFirst, withinBox, movedMoreThan, type Box } from "@/lib/utils/distance";
+import { haversine, nearestFirst, withinBox, movedMoreThan, rankNearby, type Box } from "@/lib/utils/distance";
 import type { NearProfile } from "@/types/find";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,13 +27,13 @@ export function useFindData() {
   }, []);
 
   function withDistance(items: NearProfile[]) {
-    return items
-      .map((p) => ({
+    // Nearest first; paid profiles lead within each distance band.
+    return rankNearby(
+      items.map((p) => ({
         ...p,
         distance_km: p.latitude && p.longitude ? haversine(userLat, userLng, p.latitude, p.longitude) : 9999,
-      }))
-      .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0))
-      .slice(0, 15);
+      })) as (NearProfile & { payment_status?: string | null })[],
+    ).slice(0, 15);
   }
 
   async function fetchAll() {
@@ -56,7 +56,7 @@ export function useFindData() {
       withinBox(
         supabase
           .from("profiles")
-          .select("id, full_name, profile_image_url, latitude, longitude, state, city, user_skills(skill_id, skills(name, type))")
+          .select("id, full_name, profile_image_url, latitude, longitude, state, city, payment_status, user_skills(skill_id, skills(name, type))")
           .eq("is_artisan", true)
           .eq("account_status", "active")
           .not("latitude", "is", null),

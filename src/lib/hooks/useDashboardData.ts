@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { haversineDistance, getRingForDistance, nearestFirst, withinBox, movedMoreThan } from "@/lib/utils/distance";
+import { haversineDistance, getRingForDistance, nearestFirst, withinBox, movedMoreThan, rankNearby } from "@/lib/utils/distance";
 import type { RadarProfile } from "@/types/radar";
 
 interface User {
@@ -14,7 +14,7 @@ interface User {
 const COMPANY_FIELDS =
   "id, full_name, company_name, company_logo_url, company_slug, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, is_company";
 const PERSON_FIELDS =
-  "id, full_name, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, user_skills(skill_id, skills(name, type))";
+  "id, full_name, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, payment_status, user_skills(skill_id, skills(name, type))";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = any;
@@ -91,8 +91,8 @@ export function useDashboardData(user: User | null, userLat: number, userLng: nu
       data = [];
     }
 
-    const sorted = data
-      .sort((a, b) => a.distance_km - b.distance_km)
+    // Nearest first; paid profiles lead within each distance band.
+    const sorted = rankNearby(data as (RadarProfile & { payment_status?: string | null })[])
       .slice(0, 15)
       .map((p) => ({ ...p, ring: getRingForDistance(p.distance_km) }));
 

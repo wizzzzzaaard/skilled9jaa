@@ -1,113 +1,158 @@
 "use client";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { motion } from "framer-motion";
-import { Clock, Shield, LogOut } from "lucide-react";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import "@fontsource-variable/bricolage-grotesque/wdth.css";
+import "@fontsource/atkinson-hyperlegible/400.css";
+import "@fontsource/atkinson-hyperlegible/700.css";
+import { createClient } from "@/lib/supabase/client";
+import { FlowShell } from "@/components/signup/FlowShell";
+import { FREE_SIGNUP } from "@/lib/config";
+import { naira, transferReference } from "@/lib/payments";
+import s from "@/components/signup/flow.module.css";
+
+type Payment = { amount: number; status: string; created_at: string } | null;
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 export default function PendingPage() {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [payment, setPayment] = useState<Payment>(null);
+  const [paidByCard, setPaidByCard] = useState(false);
+  const [checkedAt, setCheckedAt] = useState<Date | null>(null);
+  const stopped = useRef(false);
 
   useEffect(() => {
+    setPaidByCard(new URLSearchParams(window.location.search).get("paid") === "card");
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) { router.push("/login"); return; }
-      setEmail(data.user.email || "");
-      supabase.from("profiles")
-        .select("account_status")
-        .eq("id", data.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          if (profile?.account_status === "active") {
-            router.push("/dashboard");
-          } else {
-            setStatus(profile?.account_status || null);
-          }
-        });
-    });
+    let timer: number | undefined;
+    let delay = 4000;
+    const started = Date.now();
 
-    // Poll every 5 seconds
-    const interval = setInterval(async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("account_status")
-        .eq("id", user.id)
-        .single();
-      if (profile?.account_status === "active") {
-        clearInterval(interval);
-        router.push("/dashboard");
+    async function check(first = false) {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        router.push("/login?next=/signup/pending");
+        return;
       }
-    }, 5000);
+      if (first) {
+        setEmail(auth.user.email || "");
+        setUserId(auth.user.id);
+        const { data: pay } = await supabase
+          .from("user_payments")
+          .select("amount, status, created_at")
+          .eq("user_id", auth.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setPayment((pay as Payment) ?? null);
+      }
+      const { data: profile } = await supabase.from("profiles").select("account_status").eq("id", auth.user.id).maybeSingle();
+      setCheckedAt(new Date());
+      const st = profile?.account_status ?? null;
+      if (st === "active") {
+        router.push("/dashboard?welcome=1");
+        return;
+      }
+      // With free signup nobody waits at the door: let them in now; the transfer
+      // still gets checked and turns on the paid profile when confirmed.
+      if (FREE_SIGNUP && st === "pending_manual" && first) {
+        const { error } = await supabase.rpc("complete_signup");
+        if (!error || error.code === "PGRST202") {
+          if (error) await supabase.from("profiles").update({ account_status: "active", signup_step: 6 }).eq("id", auth.user.id);
+          router.push("/dashboard?welcome=1");
+          return;
+        }
+      }
+      setStatus(st);
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    function loop() {
+      if (stopped.current) return;
+      // Check less often over time, pause in a background tab, give up after 15 minutes.
+      if (Date.now() - started > 15 * 60_000) return;
+      timer = window.setTimeout(async () => {
+        if (document.visibilityState === "visible") await check();
+        delay = Math.min(delay * 1.4, 30000);
+        loop();
+      }, delay);
+    }
 
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    check(true).then(loop);
+    return () => {
+      stopped.current = true;
+      window.clearTimeout(timer);
+    };
+  }, [router]);
+
+  async function logout() {
+    await createClient().auth.signOut();
     router.push("/");
   }
 
-  const isPendingManual = status === "pending_manual";
+  const manual = status === "pending_manual" || (!!payment && !paidByCard);
+  const verifying = status === "pending_verify";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full text-center"
-      >
-        <Image
-          src="https://vqzvvupwhzjaahfqgron.supabase.co/storage/v1/object/public/skilled-niger-assets/marketplace/1000084258.webp"
-          alt="Skilled9ja"
-          width={48}
-          height={48}
-          className="mx-auto mb-8"
-        />
+    <FlowShell right={null}>
+      <section className={s.card} aria-labelledby="pending-title">
+        {status === null && !payment ? (
+          <p className={s.loading} role="status">Checking your account…</p>
+        ) : (
+          <>
+            <h1 className={s.title} id="pending-title">
+              {paidByCard ? "Confirming your card payment" : verifying ? "Checking your identity" : "We're checking your transfer"}
+            </h1>
+            <p className={s.sub}>
+              {paidByCard
+                ? "Paystack has your payment. It usually takes a minute to reach your account."
+                : verifying
+                ? "Our team is reviewing your NIN and photo. This usually takes one working day."
+                : "We match transfers by hand, usually within one working day."}{" "}
+              You'll get an email at {email || "your address"} when it's done. This page also updates by itself.
+            </p>
 
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-          {isPendingManual 
-            ? <Clock className="w-8 h-8 text-primary" />
-            : <Shield className="w-8 h-8 text-primary" />
-          }
-        </div>
+            <ol className={`${s.timeline} ${s.stack}`} aria-label="Progress">
+              <li className={s.done}>
+                <b>{paidByCard ? "Paid with Paystack" : verifying ? "Details submitted" : "Transfer recorded"}</b>
+                {payment && <span>{naira(Number(payment.amount))} on {when(payment.created_at)}</span>}
+              </li>
+              <li className={s.now}>
+                <b>{paidByCard ? "Confirming with your account" : verifying ? "Under review" : "Checking with the bank"}</b>
+                <span>{checkedAt ? `Last checked at ${checkedAt.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}` : "Checking…"}</span>
+              </li>
+              <li>
+                <b>Account active</b>
+                <span>We'll take you to your dashboard</span>
+              </li>
+            </ol>
 
-        <h1 className="text-xl font-semibold text-text-primary mb-3">
-          {isPendingManual ? "Payment under review" : "Identity verification in progress"}
-        </h1>
-
-        <p className="text-text-secondary text-sm mb-8 leading-relaxed">
-          {isPendingManual
-            ? `We've received your payment submission. Our team is reviewing it and you'll receive an email at ${email} once approved. This usually takes 1–2 business days.`
-            : `Our team is reviewing your NIN and photo. You'll receive an email at ${email} once verified. This usually takes 1–2 business days.`
-          }
-        </p>
-
-        {isPendingManual && (
-          <div className="bg-surface rounded-xl p-4 text-left mb-6 text-sm text-text-secondary">
-            <p className="font-semibold text-text-primary mb-1">Waiting on your transfer?</p>
-            <p>Make sure you used your account reference code as the payment description. Check your email for the bank details we sent you.</p>
-          </div>
+            {manual && userId && (
+              <p className={s.note}>
+                Did you put <b>{transferReference(userId)}</b> in the transfer description? If not, it can take longer to match. Keep your bank receipt.
+              </p>
+            )}
+            {paidByCard && (
+              <p className={s.note}>
+                Not active after 30 minutes? Contact support with the email Paystack sent you. You won't be charged twice.
+              </p>
+            )}
+          </>
         )}
-
-        <div className="flex items-center justify-center gap-2 text-xs text-text-secondary mb-8">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span>Checking status automatically...</span>
+        <div className={s.actions}>
+          <Link href="/" className={s.secondary}>
+            Home
+          </Link>
+          <button type="button" className={s.secondary} onClick={logout}>
+            Log out
+          </button>
         </div>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary mx-auto transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </button>
-      </motion.div>
-    </div>
+      </section>
+    </FlowShell>
   );
 }

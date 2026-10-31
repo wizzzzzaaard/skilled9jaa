@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isCampaignPath } from "@/lib/campaigns";
+import { hidesSiteChrome } from "@/lib/layout";
 import { Chrome as Home, Search, Calendar, Wallet, User, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useSessionStore } from "@/store/sessionStore";
@@ -11,7 +11,7 @@ export function MobileNav() {
   const pathname = usePathname();
   const { user, isLoading } = useSessionStore();
 
-  if (isCampaignPath(pathname)) return null;
+  if (hidesSiteChrome(pathname)) return null;
 
   if (isLoading) {
     return (

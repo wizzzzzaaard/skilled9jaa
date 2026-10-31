@@ -1,107 +1,50 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
+import type { SignupState } from "@/lib/hooks/useSignup";
+import { homeServiceTotal, naira } from "@/lib/payments";
+import s from "../flow.module.css";
 
-interface Props {
-  selectedCategoryCount: number;
-  plan: "growth" | "business" | "unlimited";
-  setPlan: (p: "growth" | "business" | "unlimited") => void;
-  onSubmit: () => void;
-  onBack: () => void;
-}
-
-const plans = [
-  {
-    key: "growth" as const,
-    label: "Growth",
-    extra: 0,
-    description: "Perfect for solo providers just starting out",
-    staff: "Individual only",
-  },
-  {
-    key: "business" as const,
-    label: "Business",
-    extra: 5000,
-    description: "Grow your team and manage more clients",
-    staff: "Up to 5 staff",
-  },
-  {
-    key: "unlimited" as const,
-    label: "Unlimited",
-    extra: 10000,
-    description: "Full scale operations with no limits",
-    staff: "Up to 10 staff",
-  },
+const PLANS = [
+  { key: "growth" as const, title: "Growth", body: "For one person working alone." },
+  { key: "business" as const, title: "Business", body: "For a small team. Staff tools are being built." },
+  { key: "unlimited" as const, title: "Unlimited", body: "Billed yearly. For larger teams." },
 ];
 
-function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString()}`;
-}
-
-export function HsPlanStep({
-  selectedCategoryCount,
-  plan,
-  setPlan,
-  onSubmit,
-  onBack,
-}: Props) {
-  const base = selectedCategoryCount * 1000;
-
+export function HsPlanStep({ s: f }: { s: SignupState }) {
+  const p = f.pricing;
+  const n = f.selectedHsCategoryIds.length;
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">
-        Choose your plan
-      </h2>
-      <p className="text-sm text-text-secondary mb-4">
-        Base cost: {formatNaira(1000)} × {selectedCategoryCount} service{selectedCategoryCount !== 1 ? "s" : ""} = {formatNaira(base)}
+    <section className={s.card} aria-labelledby="plan-title">
+      <h1 className={s.title} id="plan-title">
+        Choose a plan
+      </h1>
+      <p className={s.sub}>
+        Every plan lists your {n} service{n === 1 ? "" : "s"} to clients nearby.
       </p>
-
-      <div className="space-y-3 mb-6">
-        {plans.map((p) => {
-          const total = base + p.extra;
-          const selected = plan === p.key;
+      <div className={`${s.choices} ${s.stack}`} role="radiogroup" aria-labelledby="plan-title">
+        {PLANS.map((pl) => {
+          const on = f.hsPlan === pl.key;
           return (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setPlan(p.key)}
-              className={`w-full rounded-xl border p-4 text-left transition-all ${
-                selected
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-200 bg-white hover:border-primary/40"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    selected ? "border-primary" : "border-gray-300"
-                  }`}>
-                    {selected && <div className="w-2 h-2 rounded-full bg-primary" />}
-                  </div>
-                  <span className="font-semibold text-text-primary">{p.label}</span>
-                </div>
-                <span className="font-bold text-text-primary">{formatNaira(total)}</span>
-              </div>
-              <p className="text-xs text-text-secondary ml-6">{p.description}</p>
-              <p className="text-xs text-primary font-medium ml-6 mt-0.5">{p.staff}</p>
-              {p.extra > 0 && (
-                <p className="text-xs text-text-secondary ml-6 mt-0.5">
-                  Base {formatNaira(base)} + {formatNaira(p.extra)}/mo platform fee
-                </p>
-              )}
+            <button key={pl.key} type="button" role="radio" aria-checked={on} className={s.choice} onClick={() => f.setHsPlan(pl.key)}>
+              <span className={s.radio} aria-hidden="true" />
+              <span>
+                <span className={s.choiceTitle}>
+                  {pl.title} {p && <span className={s.price}>{naira(homeServiceTotal(p, n, pl.key))}{pl.key === "unlimited" ? "" : "/month"}</span>}
+                </span>
+                <span className={s.choiceBody}>{pl.body}</span>
+              </span>
             </button>
           );
         })}
       </div>
-
-      <div className="flex gap-3">
-        <Button type="button" variant="outline" className="flex-1" onClick={onBack}>
+      <div className={s.actions}>
+        <button type="button" className={s.secondary} onClick={f.goBack}>
           Back
-        </Button>
-        <Button type="button" variant="primary" className="flex-1" onClick={onSubmit}>
-          Continue to Payment
-        </Button>
+        </button>
+        <button type="button" className={s.primary} onClick={f.handleHsPlanSubmit}>
+          Next: payment
+        </button>
       </div>
-    </div>
+    </section>
   );
 }

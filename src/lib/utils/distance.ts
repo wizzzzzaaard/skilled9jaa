@@ -96,3 +96,21 @@ export async function nearestFirst<T extends { id: string }>(
 export function movedMoreThan(a: { lat: number; lng: number } | null, lat: number, lng: number, km: number): boolean {
   return !a || haversineDistance(a.lat, a.lng, lat, lng) > km;
 }
+
+/**
+ * Nearest first, but inside each distance band (2 km, 5 km, 10 km, further)
+ * paid profiles come before free ones. A paid profile never jumps ahead of a
+ * free one that's in a closer band.
+ */
+export function rankNearby<T extends { distance_km?: number | null; payment_status?: string | null }>(items: T[]): T[] {
+  const band = (km: number) => (km <= 2 ? 0 : km <= 5 ? 1 : km <= 10 ? 2 : 3);
+  return [...items].sort((a, b) => {
+    const da = a.distance_km ?? 9999;
+    const db = b.distance_km ?? 9999;
+    const bandDiff = band(da) - band(db);
+    if (bandDiff) return bandDiff;
+    const paidDiff = Number(b.payment_status === "verified") - Number(a.payment_status === "verified");
+    if (paidDiff) return paidDiff;
+    return da - db;
+  });
+}

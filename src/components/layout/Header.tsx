@@ -9,7 +9,7 @@ import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { usePathname } from "next/navigation";
-import { isCampaignPath } from "@/lib/campaigns";
+import { hidesSiteChrome } from "@/lib/layout";
 
 export function Header() {
   const { user, session } = useSessionStore();
@@ -82,7 +82,7 @@ export function Header() {
   };
 
   // Niche landing pages carry their own minimal header.
-  if (isCampaignPath(pathname)) return null;
+  if (hidesSiteChrome(pathname)) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">

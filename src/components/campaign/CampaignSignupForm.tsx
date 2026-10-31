@@ -8,6 +8,7 @@ import { useSessionStore } from "@/store/sessionStore";
 import { normalizeNgPhone } from "@/lib/utils/phone";
 import { captureAttribution, track, type Attribution } from "@/lib/utils/attribution";
 import type { SignupRole } from "@/lib/campaigns";
+import { explainSignupError, validateAccount } from "@/lib/signupRules";
 import s from "./campaign.module.css";
 
 interface Props {
@@ -21,7 +22,6 @@ type Errors = Partial<Record<"fullName" | "phone" | "email" | "password" | "cons
 type Status = "idle" | "submitting" | "check_email";
 
 const DRAFT_KEY = "s9_signup_draft";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Profile flags the signup trigger (`handle_new_user`) reads from user metadata. */
 function roleFlags(role: SignupRole) {
@@ -39,38 +39,11 @@ export function nextSignupUrl(slug: string, role: SignupRole): string {
   return `/signup?${params.toString()}`;
 }
 
-export function validate(v: {
-  fullName: string;
-  phone: string;
-  email: string;
-  password: string;
-  consent: boolean;
-}): Errors {
-  const e: Errors = {};
-  const name = v.fullName.trim().replace(/\s+/g, " ");
-  if (name.length < 3 || !name.includes(" ")) e.fullName = "Enter your first and last name.";
-  else if (name.length > 80) e.fullName = "Keep your name under 80 characters.";
-  if (!normalizeNgPhone(v.phone)) e.phone = "Enter a Nigerian mobile number, for example 0803 123 4567.";
-  if (!EMAIL_RE.test(v.email.trim())) e.email = "Enter an email address like name@example.com.";
-  if (v.password.length < 8) e.password = "Use at least 8 characters.";
-  else if (!/[A-Za-z]/.test(v.password) || !/\d/.test(v.password))
-    e.password = "Use at least one letter and one number.";
-  if (!v.consent) e.consent = "Tick the box to agree before you continue.";
-  return e;
+export function validate(v: { fullName: string; phone: string; email: string; password: string; consent: boolean }): Errors {
+  return validateAccount(v);
 }
 
-/** Turns Supabase auth errors into plain directions. */
-function explain(message: string): { text: string; login?: boolean } {
-  const m = message.toLowerCase();
-  if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already exists"))
-    return { text: "This email already has an account.", login: true };
-  if (m.includes("rate limit") || m.includes("too many"))
-    return { text: "Too many attempts from this network. Wait a minute, then try again." };
-  if (m.includes("password")) return { text: message };
-  if (m.includes("fetch") || m.includes("network"))
-    return { text: "Can't reach Skilled9ja. Check your data connection and try again." };
-  return { text: "Couldn't create your account. Try again in a moment." };
-}
+const explain = explainSignupError;
 
 export function CampaignSignupForm({ slug, role, title, cta }: Props) {
   const router = useRouter();

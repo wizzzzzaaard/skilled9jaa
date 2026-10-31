@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import {
+  Sparkles,
   LayoutDashboard, User, Calendar,
   Wallet, Settings, Briefcase, Search,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export function DashboardSidebar() {
         { label: "Search", href: "/find", icon: Search },
         { label: "Jobs", href: "/jobs", icon: Briefcase },
         { label: "Profile", href: "/profile", icon: User },
+        ...(user.payment_status !== "verified" ? [{ label: "Upgrade", href: "/upgrade", icon: Sparkles }] : []),
         { label: "Settings", href: "/settings", icon: Settings },
       ]
     : isClient
