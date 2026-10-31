@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils/format";
+import { transferReference } from "@/lib/payments";
 
 interface ManualPayment {
   id: string;
@@ -84,9 +85,18 @@ export default function AdminPaymentsPage() {
   }
 
   const pendingCount = manualPayments.filter((p) => p.status === "pending").length;
+  // Match a bank narration (S9-XXXXXXXX), a name or an email.
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLowerCase();
+  const shownPayments = manualPayments.filter((p) =>
+    !needle ||
+    transferReference(p.user_id).toLowerCase().includes(needle) ||
+    (p.profiles?.full_name ?? "").toLowerCase().includes(needle) ||
+    (p.profiles?.email ?? "").toLowerCase().includes(needle),
+  );
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h1 className="text-2xl font-semibold text-text-primary mb-6">Payments</h1>
 
       <div className="flex gap-2 mb-6">
@@ -113,6 +123,19 @@ export default function AdminPaymentsPage() {
         </button>
       </div>
 
+      {tab === "manual" && (
+        <div className="mb-4 max-w-md">
+          <label htmlFor="pay-search" className="block text-sm font-semibold mb-1">Find a transfer</label>
+          <input
+            id="pay-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Reference from the bank alert (S9-…), name or email"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -120,11 +143,12 @@ export default function AdminPaymentsPage() {
           ))}
         </div>
       ) : tab === "manual" ? (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+          <table className="w-full min-w-[720px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary">User</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary">Reference</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary">Amount</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary">Date</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary">Status</th>
@@ -132,7 +156,7 @@ export default function AdminPaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {manualPayments.map((payment) => (
+              {shownPayments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <p className="text-sm font-semibold text-text-primary">
@@ -142,11 +166,12 @@ export default function AdminPaymentsPage() {
                       {payment.profiles?.email || payment.user_id.substring(0, 8)}
                     </p>
                   </td>
+                  <td className="px-6 py-4 font-mono text-sm text-text-primary">{transferReference(payment.user_id)}</td>
                   <td className="px-6 py-4 text-sm text-text-primary">
                     {formatCurrency(payment.amount)}
                   </td>
                   <td className="px-6 py-4 text-xs text-text-secondary">
-                    {new Date(payment.created_at).toLocaleDateString()}
+                    {new Date(payment.created_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                   </td>
                   <td className="px-6 py-4">
                     <Badge variant={payment.status === "approved" ? "success" : "warning"}>

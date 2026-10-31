@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, MapPin, Briefcase, Eye, CheckCircle, XCircle,} from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { documentLink } from "@/lib/documents";
 
 interface Application {
   id: string;
@@ -48,6 +49,17 @@ export function CompanyJobsTab() {
   const { user } = useSessionStore();
   const { addToast } = useUIStore();
   const router = useRouter();
+  // Private documents open through a short-lived signed link.
+  async function openDoc(stored: string) {
+    const win = window.open("", "_blank");
+    const url = await documentLink(stored);
+    if (url && win) win.location.href = url;
+    else {
+      win?.close();
+      addToast("Couldn't open that file. Try again.", "error");
+    }
+  }
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
@@ -319,22 +331,22 @@ export function CompanyJobsTab() {
                         {/* Document links */}
                         <div className="flex gap-2 flex-wrap">
                           {app.cv_url && (
-                            <a href={app.cv_url} target="_blank" rel="noopener noreferrer"
+                            <button type="button" onClick={() => openDoc(app.cv_url!)}
                               className="text-xs text-primary underline">
                               View CV
-                            </a>
+                            </button>
                           )}
                           {app.nin_url && (
-                            <a href={app.nin_url} target="_blank" rel="noopener noreferrer"
+                            <button type="button" onClick={() => openDoc(app.nin_url!)}
                               className="text-xs text-primary underline">
                               View NIN
-                            </a>
+                            </button>
                           )}
                           {app.photo_url && (
-                            <a href={app.photo_url} target="_blank" rel="noopener noreferrer"
+                            <button type="button" onClick={() => openDoc(app.photo_url!)}
                               className="text-xs text-primary underline">
                               View Photo
-                            </a>
+                            </button>
                           )}
                         </div>
 
