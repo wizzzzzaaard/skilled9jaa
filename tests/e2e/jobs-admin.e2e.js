@@ -202,7 +202,7 @@ async function login(page, email) {
     assert(!/\/admin$/.test(a.page.url()) || (await a.page.getByText("Admins only.").count()) === 1, "non-admin saw admin");
     await setProfile("boss@example.com", { is_admin: true });
     await a.page.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
-    await a.page.getByText("Members").first().waitFor({ timeout: 10000 });
+    await a.page.getByText("Open jobs").first().waitFor({ timeout: 10000 });
     const text = await a.page.locator("main").textContent();
     await a.page.screenshot({ path: path.join(OUT, "admin-overview-desktop.png"), fullPage: true });
     await a.ctx.close();

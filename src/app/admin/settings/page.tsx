@@ -17,6 +17,8 @@ interface PlatformSettings {
  home_unlimited_price: number;
   skilled9ja_display_price: number;
   skilled9ja_slash_price: number;
+  paystack_enabled?: boolean | null;
+  manual_payment_enabled?: boolean | null;
 }
 
 export default function AdminSettingsPage() {
@@ -55,9 +57,14 @@ export default function AdminSettingsPage() {
       home_unlimited_price: settings.home_unlimited_price,
         skilled9ja_display_price: settings.skilled9ja_display_price,
         skilled9ja_slash_price: settings.skilled9ja_slash_price,
+        paystack_enabled: settings.paystack_enabled !== false,
+        manual_payment_enabled: settings.manual_payment_enabled !== false,
       })
       .eq("id", 1);
 
+    if (!error && settings.paystack_enabled === false && settings.manual_payment_enabled === false) {
+      addToast("Both payment methods are off, so nobody can pay for a plan.", "error");
+    }
     if (error) {
       addToast("Failed to save settings", "error");
     } else {
@@ -69,13 +76,37 @@ export default function AdminSettingsPage() {
   if (loading) return <Skeleton className="h-64 m-8" />;
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       <h1 className="text-2xl font-semibold text-text-primary mb-6">
         Settings
       </h1>
 
       {settings && (
         <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+          <fieldset className="space-y-3">
+            <legend className="font-semibold text-text-primary">Payment methods</legend>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 w-4 h-4 accent-[#1B4332]"
+                checked={settings.paystack_enabled !== false}
+                onChange={(e) => setSettings({ ...settings, paystack_enabled: e.target.checked })}
+              />
+              <span><span className="font-semibold">Card, bank and USSD (Paystack)</span><span className="block text-text-secondary">Members are activated automatically when Paystack confirms.</span></span>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 w-4 h-4 accent-[#1B4332]"
+                checked={settings.manual_payment_enabled !== false}
+                onChange={(e) => setSettings({ ...settings, manual_payment_enabled: e.target.checked })}
+              />
+              <span><span className="font-semibold">Direct bank transfer</span><span className="block text-text-secondary">You confirm each one in Payments, matched by its S9- reference.</span></span>
+            </label>
+            {settings.paystack_enabled === false && settings.manual_payment_enabled === false && (
+              <p className="text-sm font-semibold text-red-700" role="alert">With both off, nobody can pay for a plan.</p>
+            )}
+          </fieldset>
           <Input
             label="Transport Rate per KM (₦)"
             type="number"
@@ -162,7 +193,7 @@ export default function AdminSettingsPage() {
             }
           />
           <Input
-            label="Artisan Premium Price — ₦ (upsell)"
+            label="Artisan Premium Price — ₦ (not used: no screen sells this yet)"
             type="number"
             value={settings.skilled9ja_slash_price}
             onChange={(e) =>

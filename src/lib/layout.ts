@@ -6,5 +6,5 @@ import { isCampaignPath } from "@/lib/campaigns";
  */
 export function hidesSiteChrome(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return isCampaignPath(pathname) || pathname === "/signup" || pathname.startsWith("/signup/") || pathname === "/upgrade";
+  return isCampaignPath(pathname) || pathname === "/signup" || pathname.startsWith("/signup/") || pathname === "/upgrade" || pathname === "/admin" || pathname.startsWith("/admin/");
 }

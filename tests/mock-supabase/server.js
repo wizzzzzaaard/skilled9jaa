@@ -90,6 +90,7 @@ function seed() {
       ],
       job_applications: [],
       verifications: [],
+      admin_audit_log: [],
       perks: [
         { id: "p1", name: "Feeding" },
         { id: "p2", name: "Accommodation" },
@@ -211,8 +212,17 @@ function matches(row, params) {
       if (!String(val ?? "").toLowerCase().includes(pat)) return false;
       continue;
     }
-    if (op === "gte" && !(Number(val) >= Number(arg))) return false;
-    if (op === "lte" && !(Number(val) <= Number(arg))) return false;
+    if (key === "or") {
+      // or=(a.ilike.%x%,b.eq.y): passes when any clause matches.
+      const clauses = arg ? `${op}.${arg}` : op;
+      const parts = clauses.replace(/^\(|\)$/g, "").split(",");
+      if (!parts.some((c) => { const i = c.indexOf("."); return matches(row, [[c.slice(0, i), c.slice(i + 1)]]); })) return false;
+      continue;
+    }
+    const num = (x) => x !== null && x !== "" && !isNaN(Number(x));
+    const cmp = (a, b) => (num(a) && num(b) ? Number(a) - Number(b) : (String(a ?? "") < String(b) ? -1 : String(a ?? "") > String(b) ? 1 : 0));
+    if (op === "gte" && !(val != null && cmp(val, arg) >= 0)) return false;
+    if (op === "lte" && !(val != null && cmp(val, arg) <= 0)) return false;
     if (op === "in") {
       const list = arg.replace(/^\(|\)$/g, "").split(",");
       if (!list.includes(String(val))) return false;
@@ -248,7 +258,7 @@ const server = http.createServer(async (req, res) => {
     addEmployer();
     return send(res, 200, { ok: true });
   }
-  if (p === "/__mock/state") return send(res, 200, { profiles: db.tables.profiles.filter((x) => x.id !== EMPLOYER_ID), employer: db.tables.profiles.find((x) => x.id === EMPLOYER_ID), user_skills: db.tables.user_skills, orders: db.tables.orders, user_payments: db.tables.user_payments, provider_service_options: db.tables.provider_service_options, job_applications: db.tables.job_applications });
+  if (p === "/__mock/state") return send(res, 200, { profiles: db.tables.profiles.filter((x) => x.id !== EMPLOYER_ID), employer: db.tables.profiles.find((x) => x.id === EMPLOYER_ID), user_skills: db.tables.user_skills, orders: db.tables.orders, user_payments: db.tables.user_payments, provider_service_options: db.tables.provider_service_options, job_applications: db.tables.job_applications, jobs: db.tables.jobs, audit: db.tables.admin_audit_log });
   if (p === "/__mock/log") return send(res, 200, db.log);
   if (p === "/__mock/webhook") {
     // Simulates the Paystack webhook for the newest pending order.
@@ -309,6 +319,71 @@ const server = http.createServer(async (req, res) => {
     if (body?.action === "fetch_manual") return send(res, 200, { data: withProfile(db.tables.user_payments) });
     if (body?.action === "fetch_orders") return send(res, 200, { data: withProfile(db.tables.orders) });
     return send(res, 400, { error: "Unknown action" });
+  }
+
+  // ── admin-actions edge function (mirrors supabase/functions/admin-actions) ──
+  if (p === "/functions/v1/admin-actions") {
+    const u = userFrom(req);
+    if (!u) return send(res, 401, { error: "Unauthorized" });
+    const me = db.tables.profiles.find((x) => x.id === u.id);
+    if (!me?.is_admin) return send(res, 403, { error: "Forbidden" });
+    const T = db.tables;
+    const audit = (target_type, target_id, detail) =>
+      T.admin_audit_log.push({ id: T.admin_audit_log.length + 1, created_at: now(), admin_id: me.id, action: body.action, target_type, target_id, detail, reason: body.reason || null });
+    const STUCK = ["incomplete", "pending_payment", "pending_manual"];
+    switch (body?.action) {
+      case "set_user_status": {
+        if (!["active", "suspended"].includes(body.status)) return send(res, 400, { error: "Unknown status" });
+        if (body.user_id === me.id) return send(res, 400, { error: "You can't change your own account here" });
+        const t = T.profiles.find((x) => x.id === body.user_id);
+        if (!t) return send(res, 404, { error: "Member not found" });
+        const from = t.account_status;
+        t.account_status = body.status;
+        audit("profile", t.id, { from, to: body.status });
+        return send(res, 200, { ok: true });
+      }
+      case "let_in": {
+        const ids = (body.user_ids || []).slice(0, 500);
+        if (!ids.length) return send(res, 400, { error: "No members chosen" });
+        const rows = T.profiles.filter((x) => ids.includes(x.id) && STUCK.includes(x.account_status));
+        rows.forEach((x) => { x.account_status = "active"; x.signup_step = 6; });
+        audit("profiles", `${rows.length} members`, { ids: rows.map((x) => x.id) });
+        return send(res, 200, { ok: true, updated: rows.length });
+      }
+      case "mark_paid": {
+        const t = T.profiles.find((x) => x.id === body.user_id);
+        if (!t) return send(res, 404, { error: "Member not found" });
+        t.payment_status = "verified";
+        T.user_payments.filter((x) => x.user_id === t.id && x.status === "pending").forEach((x) => (x.status = "approved"));
+        audit("profile", t.id, { payment_status: "verified" });
+        return send(res, 200, { ok: true });
+      }
+      case "list_jobs": {
+        let rows = T.jobs.filter((j) => (!body.status || j.status === body.status) && (!body.q || j.title.toLowerCase().includes(String(body.q).toLowerCase())));
+        const count = rows.length;
+        const off = Number(body.offset || 0);
+        rows = rows.slice(off, off + 50);
+        const ids = [...new Set(rows.map((j) => j.employer_id))];
+        const employers = T.profiles.filter((x) => ids.includes(x.id)).map(({ id, company_name, full_name, email }) => ({ id, company_name, full_name, email }));
+        return send(res, 200, { data: rows, count, employers });
+      }
+      case "set_job_status": {
+        if (!["active", "closed", "removed"].includes(body.status)) return send(res, 400, { error: "Unknown status" });
+        const j = T.jobs.find((x) => x.id === body.job_id);
+        if (!j) return send(res, 404, { error: "Job not found" });
+        const from = j.status;
+        j.status = body.status;
+        audit("job", j.id, { title: j.title, from, to: body.status });
+        return send(res, 200, { ok: true });
+      }
+      case "list_audit": {
+        const data = [...T.admin_audit_log].reverse().slice(0, 200);
+        const admins = T.profiles.filter((x) => data.some((r) => r.admin_id === x.id)).map(({ id, full_name }) => ({ id, full_name }));
+        return send(res, 200, { data, admins });
+      }
+      default:
+        return send(res, 400, { error: "Unknown action" });
+    }
   }
 
   // ── storage ──
