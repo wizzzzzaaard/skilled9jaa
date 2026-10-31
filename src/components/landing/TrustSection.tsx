@@ -6,21 +6,21 @@ import { Shield, CreditCard, Users } from "lucide-react";
 const features = [
   {
     icon: Shield,
-    title: "NIN Verified",
+    title: "NIN verified badge",
     description:
-      "Every service provider is verified with their National Identification Number",
+      "Pros who confirm their identity with their NIN and a selfie get a verified badge. Look for it before you hire.",
   },
   {
     icon: CreditCard,
-    title: "Escrow Payment",
+    title: "Closest first",
     description:
-      "Your payment is held safely until the service is completed satisfactorily",
+      "Search results are sorted by distance, so the pros and companies near you show at the top.",
   },
   {
     icon: Users,
-    title: "Trustee System",
+    title: "Real work on show",
     description:
-      "Nominate up to 2 trusted contacts who are notified when you book a service",
+      "Pros post photos of jobs they've finished, so you can see their work before you contact them.",
   },
 ];
 

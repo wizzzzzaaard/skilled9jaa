@@ -78,7 +78,7 @@ const PANELS = [
       "Client notified you're on your way",
     ],
     cta: "Learn About Shield",
-    href: "/home-service-shield",
+    href: "/homeservice",
     visual: "shield",
   },
 ] as const;

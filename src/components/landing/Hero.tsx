@@ -234,7 +234,7 @@ function Radar3D() {
 const PROBLEMS = [
   { n: "01", title: "Jobs closer to home",           body: "Get matched with clients and companies near you — less commute, lower cost, more work done." },
   { n: "02", title: "People find you automatically", body: "Anyone in your area searching for your skill sees you first. No chasing, no ads." },
-  { n: "03", title: "Direct payments, zero cuts",    body: "Clients pay you straight. We never touch your money or take a commission." },
+  { n: "03", title: "Free to join",                  body: "Create your profile and get found at no cost. Paid options only add extra visibility." },
 ];
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
@@ -269,10 +269,33 @@ export function Hero() {
           }}>
             Apply for top-tier jobs and get skilled artisans just minutes away!
           </h1>
-          <p style={{ fontSize: 13.5, color: "#6b7c74", lineHeight: 1.65, margin: "0 0 28px" }}>
+          <p style={{ fontSize: 13.5, color: "#4b5f54", lineHeight: 1.65, margin: "0 0 22px" }}>
             Skip the long commute and save on transport fares. Use live GPS to uncover premium roles around you, filter for perks like accommodation and feeding, and apply directly within the platform.
           </p>
 
+
+          {/* Signup: one door per kind of visitor */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+            <a href="/jobs-near-me" style={{
+              display: "inline-flex", alignItems: "center", minHeight: 48, padding: "0 22px",
+              borderRadius: 12, background: "#F4B400", color: G.dark, fontWeight: 800, fontSize: 15,
+              boxShadow: "inset 0 -3px 0 #c48f00",
+            }}>
+              Find work near me
+            </a>
+            <a href="/hire" style={{
+              display: "inline-flex", alignItems: "center", minHeight: 48, padding: "0 22px",
+              borderRadius: 12, background: G.dark, color: "#fff", fontWeight: 700, fontSize: 15,
+            }}>
+              Hire staff
+            </a>
+          </div>
+          <p style={{ fontSize: 13.5, color: "#4b5f54", margin: "0 0 28px" }}>
+            Need a plumber, tailor or makeup artist?{" "}
+            <a href="/hire-a-pro" style={{ color: G.mid, fontWeight: 700, textDecoration: "underline" }}>Find a pro near you</a>
+            {" "}or{" "}
+            <a href="/artisans" style={{ color: G.mid, fontWeight: 700, textDecoration: "underline" }}>join as a pro</a>.
+          </p>
 
           {/* Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

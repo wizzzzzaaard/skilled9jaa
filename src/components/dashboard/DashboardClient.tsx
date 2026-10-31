@@ -12,6 +12,7 @@ import { DashboardTitle } from "./DashboardTitle";
 import { ViewToggle } from "./ViewToggle";
 import { RadarLoading } from "./RadarLoading";
 import { ProfileOverlay } from "./ProfileOverlay";
+import { WelcomeChecklist } from "./WelcomeChecklist";
 import type { RadarProfile } from "@/types/radar";
 
 export function DashboardClient() {
@@ -63,6 +64,7 @@ export function DashboardClient() {
   return (
     <div className="min-h-screen bg-white pb-20 overflow-hidden">
       <DashboardHeader locationLabel={locationLabel} />
+      <WelcomeChecklist user={user} />
       <DashboardTitle title={title} subtitle={subtitle} />
       <ViewToggle view={view} onChange={setView} />
       <div className="px-4">

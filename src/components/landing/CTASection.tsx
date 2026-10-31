@@ -18,18 +18,23 @@ export function CTASection() {
             Ready to get started?
           </h2>
           <p className="text-text-secondary mb-8">
-            Join thousands of Nigerians finding and offering trusted services
-            every day. Create your free account in under 2 minutes.
+            Find work, hire staff or book a pro near you. Creating an account is
+            free and takes about a minute.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/signup">
+            <Link href="/hire-a-pro">
               <Button variant="primary" size="lg">
-                Find Now →
+                Find a pro near me
               </Button>
             </Link>
-            <Link href="/signup">
+            <Link href="/artisans">
               <Button variant="outline" size="lg">
-                Join as Pro
+                Join as a pro
+              </Button>
+            </Link>
+            <Link href="/hire">
+              <Button variant="outline" size="lg">
+                Hire staff
               </Button>
             </Link>
           </div>

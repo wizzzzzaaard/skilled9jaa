@@ -13,7 +13,7 @@ export function Footer() {
     { label: "About", href: "/about" },
     { label: "Find Talent", href: "/find" },
     { label: "Home Service", href: "/homeservice" },
-    { label: "Post a Job", href: "/jobs" },
+    { label: "Post a Job", href: "/jobs/post" },
   ];
 
   if (isCampaignPath(pathname)) return null;

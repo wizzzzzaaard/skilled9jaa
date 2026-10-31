@@ -29,14 +29,14 @@ const JOB_SEEKER_STEPS = [
     icon: Bell,
     number: 3,
     title: "Receive Job Alerts",
-    description: "Get instant notifications when jobs matching your skills are posted. Never miss an opportunity that fits your expertise.",
+    description: "See new jobs that match your skills and location, sorted with the closest employers first.",
     tip: "Customize alerts by location and skill",
   },
   {
     icon: Briefcase,
     number: 4,
     title: "Apply & Get Hired",
-    description: "Apply to jobs directly through the platform. Chat with employers, negotiate terms, and land your next gig or permanent position.",
+    description: "Apply from your phone with your profile. Track each application and see when an employer accepts you.",
     tip: "Quick responders get hired faster",
   },
 ];
@@ -53,21 +53,21 @@ const EMPLOYER_STEPS = [
     icon: FileText,
     number: 2,
     title: "Post Your First Job",
-    description: "Post your first job for free! Set requirements, salary range, and location. Our system ensures only qualified candidates apply.",
+    description: "Post your first job free. Set the salary range, location, perks and what applicants must send.",
     tip: "1 free job post on signup",
   },
   {
     icon: Search,
     number: 3,
     title: "Review Applications",
-    description: "Receive hundreds of qualified applications. Filter by experience, location, and ratings. View portfolios and past work samples.",
+    description: "Review applications in one inbox, with each applicant's profile, CV and photo.",
     tip: "500–1000 guaranteed applications",
   },
   {
     icon: CheckCircle2,
     number: 4,
     title: "Hire Top Talent",
-    description: "Interview candidates, check reviews from previous employers, and hire with confidence. Manage everything from one dashboard.",
+    description: "Review, accept and contact the people you want, all from your company dashboard.",
     tip: "Average hiring time: 5–7 days",
   },
 ];
@@ -209,7 +209,7 @@ export function HowItWorks() {
     ? "From electricians to graphic designers, thousands of professionals use Skilled9ja to connect with employers across Nigeria."
     : "Access thousands of verified professionals across Nigeria. Post jobs and get hundreds of qualified applications within days.";
   const ctaLabel = isSeeker ? "Start Finding Jobs Now" : "Post Your First Job Free";
-  const ctaHref  = isSeeker ? "/find" : "/post-job";
+  const ctaHref  = isSeeker ? "/jobs-near-me" : "/hire";
 
   return (
     <section style={{ background: "#f9fbf9", padding: "72px 0 80px" }}>

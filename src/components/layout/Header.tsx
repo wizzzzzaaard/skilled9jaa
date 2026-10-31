@@ -26,7 +26,7 @@ export function Header() {
 
   const navLinks = [
     { label: "Find Talent", href: "/find" },
-    { label: "Post a Job", href: "/jobs" },
+    { label: "Post a Job", href: "/jobs/post" },
     { label: "Home Service", href: "/homeservice" },
   ];
 

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { haversineDistance, getRingForDistance } from "@/lib/utils/distance";
+import { haversineDistance, getRingForDistance, nearestFirst, withinBox, movedMoreThan } from "@/lib/utils/distance";
 import type { RadarProfile } from "@/types/radar";
 
 interface User {
@@ -11,120 +11,101 @@ interface User {
   state?: string | null;
 }
 
+const COMPANY_FIELDS =
+  "id, full_name, company_name, company_logo_url, company_slug, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, is_company";
+const PERSON_FIELDS =
+  "id, full_name, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, user_skills(skill_id, skills(name, type))";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = any;
+
+function withSkills(p: Row, userLat: number, userLng: number): RadarProfile {
+  const skillItems = p.user_skills || [];
+  const skillSkill = skillItems.find((us: Row) => us.skills?.type === "SKILL");
+  const jobSkill = skillItems.find((us: Row) => us.skills?.type === "JOB");
+  return {
+    ...p,
+    skill: skillSkill?.skills?.name,
+    job_role: jobSkill?.skills?.name,
+    is_company: false,
+    distance_km: haversineDistance(userLat, userLng, p.latitude, p.longitude),
+    ring: 1,
+  };
+}
+
 export function useDashboardData(user: User | null, userLat: number, userLng: number) {
   const [profiles, setProfiles] = useState<RadarProfile[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const hasFetched = useRef(false);
+  // Where we last searched from. The first search often uses the default
+  // (Lagos) before GPS answers; search again once the real location arrives.
+  const lastSearch = useRef<{ lat: number; lng: number } | null>(null);
 
   const fetchProfiles = useCallback(async () => {
     if (!user) return;
     setDataLoading(true);
     const supabase = createClient();
+    const companies = (box: Parameters<typeof withinBox>[1]) =>
+      withinBox(
+        supabase.from("profiles").select(COMPANY_FIELDS).eq("is_company", true).eq("account_status", "active").not("latitude", "is", null),
+        box,
+      ).limit(200);
+    const people = (box: Parameters<typeof withinBox>[1]) =>
+      withinBox(
+        supabase.from("profiles").select(PERSON_FIELDS).eq("is_artisan", true).eq("account_status", "active").not("latitude", "is", null),
+        box,
+      ).limit(200);
+
     let data: RadarProfile[] = [];
-
-    if (user.is_artisan) {
-      // Artisans see closest companies
-      const { data: res } = await supabase
-        .from("profiles")
-        .select("id, full_name, company_name, company_logo_url, company_slug, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, is_company")
-        .eq("is_company", true)
-        .not("latitude", "is", null)
-        .eq("account_status", "active")
-        .limit(200);
-
-      if (res) {
+    try {
+      if (user.is_artisan) {
+        // Artisans and job seekers see the closest companies
+        const res = await nearestFirst<Row>(userLat, userLng, companies);
         data = res.map((p) => ({
           ...p,
           is_company: true,
-          is_hiring: true, // will enhance with jobs count later
-          distance_km: haversineDistance(userLat, userLng, p.latitude!, p.longitude!),
+          is_hiring: true,
+          distance_km: haversineDistance(userLat, userLng, p.latitude, p.longitude),
           ring: 1,
         }));
-      }
-    } else if (user.is_company) {
-      // Companies see closest artisans AND companies
-      const [{ data: artisans }, { data: companies }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, full_name, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, user_skills(skill_id, skills(name, type))")
-          .eq("is_artisan", true)
-          .eq("account_status", "active")
-          .not("latitude", "is", null)
-          .limit(100),
-        supabase
-          .from("profiles")
-          .select("id, full_name, company_name, company_logo_url, company_slug, profile_image_url, latitude, longitude, state, city, is_mock, verification_status")
-          .eq("is_company", true)
-          .eq("account_status", "active")
-          .not("latitude", "is", null)
-          .limit(100),
-      ]);
-
-      const artisanData: RadarProfile[] = (artisans || []).map((p: any) => {
-        const skillItems = p.user_skills || [];
-        const skillSkill = skillItems.find((us: any) => us.skills?.type === "SKILL");
-        const jobSkill = skillItems.find((us: any) => us.skills?.type === "JOB");
-        return {
-          ...p,
-          skill: skillSkill?.skills?.name,
-          job_role: jobSkill?.skills?.name,
-          is_company: false,
-          distance_km: haversineDistance(userLat, userLng, p.latitude!, p.longitude!),
-          ring: 1,
-        };
-      });
-
-      const companyData: RadarProfile[] = (companies || []).map((p) => ({
-        ...p,
-        is_company: true,
-        distance_km: haversineDistance(userLat, userLng, p.latitude!, p.longitude!),
-        ring: 1,
-      }));
-
-      data = [...artisanData, ...companyData];
-    } else {
-      // Clients see closest artisans/home service providers
-      const { data: res } = await supabase
-        .from("profiles")
-        .select("id, full_name, profile_image_url, latitude, longitude, state, city, is_mock, verification_status, user_skills(skill_id, skills(name, type))")
-        .eq("is_artisan", true)
-        .not("latitude", "is", null)
-        .limit(200);
-
-      if (res) {
-        data = (res as any[]).map((p) => {
-          const skillItems = p.user_skills || [];
-          const skillSkill = skillItems.find((us: any) => us.skills?.type === "SKILL");
-          const jobSkill = skillItems.find((us: any) => us.skills?.type === "JOB");
-          return {
+      } else if (user.is_company) {
+        // Companies see the closest people and other companies
+        const [ppl, cos] = await Promise.all([
+          nearestFirst<Row>(userLat, userLng, people),
+          nearestFirst<Row>(userLat, userLng, companies),
+        ]);
+        data = [
+          ...ppl.map((p) => withSkills(p, userLat, userLng)),
+          ...cos.map((p) => ({
             ...p,
-            skill: skillSkill?.skills?.name,
-            job_role: jobSkill?.skills?.name,
-            is_company: false,
-            distance_km: haversineDistance(userLat, userLng, p.latitude!, p.longitude!),
+            is_company: true,
+            distance_km: haversineDistance(userLat, userLng, p.latitude, p.longitude),
             ring: 1,
-          };
-        });
+          })),
+        ];
+      } else {
+        // Clients see the closest active pros (previously unfinished accounts showed too)
+        const res = await nearestFirst<Row>(userLat, userLng, people);
+        data = res.map((p) => withSkills(p, userLat, userLng));
       }
+    } catch {
+      data = [];
     }
 
     const sorted = data
       .sort((a, b) => a.distance_km - b.distance_km)
       .slice(0, 15)
-      .map((p) => ({
-        ...p,
-        ring: getRingForDistance(p.distance_km),
-      }));
+      .map((p) => ({ ...p, ring: getRingForDistance(p.distance_km) }));
 
+    lastSearch.current = { lat: userLat, lng: userLng };
     setProfiles(sorted);
     setDataLoading(false);
   }, [user, userLat, userLng]);
 
   useEffect(() => {
-    if (!user || hasFetched.current) return;
-    hasFetched.current = true;
+    if (!user) return;
+    if (!movedMoreThan(lastSearch.current, userLat, userLng, 1)) return;
     fetchProfiles();
-  }, [user, fetchProfiles]);
+  }, [user, userLat, userLng, fetchProfiles]);
 
   return { profiles, dataLoading, refetch: fetchProfiles };
 }

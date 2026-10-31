@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArtisanHeader } from "./ArtisanHeader";
 import { SetupTab } from "./SetupTab";
 import { PostsTab } from "./PostsTab";
@@ -10,6 +10,11 @@ type Tab = "setup" | "posts" | "verify" | "applications";
 
 export function ArtisanProfile() {
   const [tab, setTab] = useState<Tab>("setup");
+  // Deep links such as /profile?tab=posts open the right tab (used by the welcome checklist).
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("tab");
+    if (wanted && ["setup", "posts", "verify", "applications", "jobs"].includes(wanted)) setTab(wanted as Tab);
+  }, []);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "setup", label: "Setup" },

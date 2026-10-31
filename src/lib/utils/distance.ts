@@ -53,3 +53,46 @@ export function haversine(lat1: number, lng1: number, lat2: number, lng2: number
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+export interface Box {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+/** A square of roughly `km` around a point, for filtering in the database before sorting. */
+export function boundingBox(lat: number, lng: number, km: number): Box {
+  const dLat = km / 111.32;
+  const dLng = km / (111.32 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+  return { minLat: lat - dLat, maxLat: lat + dLat, minLng: lng - dLng, maxLng: lng + dLng };
+}
+
+/** Adds the box to a Supabase query (no-op when box is null). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function withinBox<Q extends { gte: any; lte: any }>(q: Q, box: Box | null): Q {
+  if (!box) return q;
+  return q.gte("latitude", box.minLat).lte("latitude", box.maxLat).gte("longitude", box.minLng).lte("longitude", box.maxLng);
+}
+
+/**
+ * Nearest-first fetch: asks the database for people inside ~30 km first, so a
+ * row limit can't cut out the closest ones. Widens to everywhere only when
+ * the area has too few results.
+ */
+export async function nearestFirst<T extends { id: string }>(
+  lat: number,
+  lng: number,
+  run: (box: Box | null) => PromiseLike<{ data: T[] | null }>,
+  want = 15,
+): Promise<T[]> {
+  const near = (await run(boundingBox(lat, lng, 30))).data ?? [];
+  if (near.length >= want) return near;
+  const wide = (await run(null)).data ?? [];
+  const seen = new Set(near.map((r) => r.id));
+  return [...near, ...wide.filter((r) => !seen.has(r.id))];
+}
+
+/** True when two points are more than `km` apart (used to decide when to search again). */
+export function movedMoreThan(a: { lat: number; lng: number } | null, lat: number, lng: number, km: number): boolean {
+  return !a || haversineDistance(a.lat, a.lng, lat, lng) > km;
+}

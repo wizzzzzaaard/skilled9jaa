@@ -104,7 +104,9 @@ function StatItem({ value, suffix, label, delay, icon }: StatItemProps) {
   );
 }
 
-export function StatsBar() {
+export function StatsBar({ stats }: { stats: { openJobs: number; states: number; employers: number } | null }) {
+  // Only real figures. If the database is unreachable, show nothing rather than made-up numbers.
+  if (!stats || stats.openJobs === 0) return null;
   return (
     <section style={{
       background: `linear-gradient(135deg, ${GREEN} 0%, #1a3d28 60%, #0f2419 100%)`,
@@ -124,7 +126,7 @@ export function StatsBar() {
         background: "rgba(255,255,255,0.04)", pointerEvents: "none",
       }} />
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px", position: "relative" }}>
 
         {/* Header */}
         <motion.div
@@ -139,13 +141,13 @@ export function StatsBar() {
             color: "rgba(255,255,255,0.55)", textTransform: "uppercase",
             marginBottom: 8,
           }}>
-            Trusted Across Nigeria
+            Live on Skilled9ja
           </p>
           <h2 style={{
             fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 700,
             color: "#ffffff", letterSpacing: "-0.02em",
           }}>
-            The numbers speak for themselves
+            Hiring right now
           </h2>
         </motion.div>
 
@@ -157,10 +159,10 @@ export function StatsBar() {
         }}
           className="stats-grid"
         >
-          <StatItem value={36}   suffix=""    label="States Covered"      delay={0}   icon="🗺️" />
-          <StatItem value={950}  suffix="+"   label="Verified Professionals" delay={100} icon="👷" />
-          <StatItem value={5000} suffix="+"   label="Bookings Completed"   delay={200} icon="✅" />
-          <StatItem value={100}  suffix="%"   label="Verified & Safe"      delay={300} icon="🛡️" />
+          <StatItem value={stats.openJobs}  suffix="" label="Open jobs"            delay={0}   icon="💼" />
+          <StatItem value={stats.employers} suffix="" label="Companies hiring"     delay={100} icon="🏢" />
+          <StatItem value={stats.states}    suffix="" label="States with open jobs" delay={200} icon="🗺️" />
+          <StatItem value={0}               suffix="" label="Naira to join"         delay={300} icon="✅" />
         </div>
       </div>
 

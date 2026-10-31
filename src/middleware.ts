@@ -33,14 +33,17 @@ export async function middleware(request: NextRequest) {
   // "/" must only match the home page: a bare startsWith("/") made every route public.
   const publicPrefixes = ["/about", "/homeservice", "/find", "/login",
     "/signup", "/suspended", "/bill", "/book", "/company", "/provider",
-    "/jobs", "/privacy", "/terms",
+    "/jobs", "/privacy", "/terms", "/forgot-password", "/reset-password",
     ...CAMPAIGN_SLUGS.map((slug) => `/${slug}`),
   ];
   const isPublic = path === "/" || publicPrefixes.some(p => path === p || path.startsWith(`${p}/`));
 
   if (!session) {
     if (!isPublic) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      // Send them back here after they log in.
+      const login = new URL("/login", request.url);
+      login.searchParams.set("next", path + request.nextUrl.search);
+      return NextResponse.redirect(login);
     }
     return response;
   }
@@ -64,7 +67,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Onboarding gate — applies everywhere except onboarding paths
-  const isOnboardingPath = path.startsWith("/signup") || path === "/suspended";
+  // Resetting a password must work whatever state the account is in.
+  const isOnboardingPath = path.startsWith("/signup") || path === "/suspended" || path === "/reset-password";
 
   if (!isOnboardingPath) {
     if (status === "incomplete") {
