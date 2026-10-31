@@ -14,6 +14,7 @@ import {
   Database,
   Megaphone,
   ArrowLeft,
+  Link2,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Categories", href: "/admin/categories", icon: Layers },
   { label: "Mocks", href: "/admin/mocks", icon: Database },
   { label: "Broadcasts", href: "/admin/broadcasts", icon: Megaphone },
+  { label: "Campaign links", href: "/admin/campaigns", icon: Link2 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

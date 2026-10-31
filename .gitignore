@@ -1,2 +1,7 @@
 node_modules/
 .env
+.next/
+tmp/
+.env*.local
+tests/e2e/shots/
+tsconfig.tsbuildinfo

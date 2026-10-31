@@ -1,10 +1,13 @@
 "use client";
+import { usePathname } from "next/navigation";
 import { useSessionStore } from "@/store/sessionStore";
+import { isCampaignPath } from "@/lib/campaigns";
 import { DashboardSidebar } from "./DashboardSidebar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useSessionStore();
-  if (!user || user.account_status !== "active") return <>{children}</>;
+  const pathname = usePathname();
+  if (!user || user.account_status !== "active" || isCampaignPath(pathname)) return <>{children}</>;
   return (
     <div className="flex min-h-screen">
       <DashboardSidebar />

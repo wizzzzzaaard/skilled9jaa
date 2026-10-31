@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { isCampaignPath } from "@/lib/campaigns";
 
 export function Footer() {
+  const pathname = usePathname();
   const currentYear = new Date().getFullYear();
 
   const links = [
@@ -12,6 +15,8 @@ export function Footer() {
     { label: "Home Service", href: "/homeservice" },
     { label: "Post a Job", href: "/jobs" },
   ];
+
+  if (isCampaignPath(pathname)) return null;
 
   return (
     <footer className="border-t border-gray-100 bg-white">

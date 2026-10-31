@@ -14,8 +14,9 @@ interface Props {
   bankDetails: BankDetails | null;
   userId: string | null;
   isLoading: boolean;
-  handleManualSubmit: () => void;
-  handlePaystackPay: () => void;
+  handleManualSubmit: (amount: number) => void;
+  handlePaystackPay: (amount: number) => void;
+  confirmingPayment?: boolean;
   setStep: (s: any) => void;
   isArtisan: boolean;
 }
@@ -32,6 +33,7 @@ export function PaymentStep({
   isLoading,
   handleManualSubmit,
   handlePaystackPay,
+  confirmingPayment = false,
   setStep,
   isArtisan,
 }: Props) {
@@ -139,8 +141,8 @@ export function PaymentStep({
           <div className="bg-surface rounded-xl p-4 text-sm text-text-secondary">
             You'll be redirected to Paystack's secure checkout.
           </div>
-          <Button variant="primary" className="w-full" onClick={handlePaystackPay}>
-            Pay ₦{finalAmount.toLocaleString()} Now
+          <Button variant="primary" className="w-full" onClick={() => handlePaystackPay(finalAmount)} isLoading={confirmingPayment} disabled={confirmingPayment}>
+            {confirmingPayment ? "Confirming your payment…" : `Pay ₦${finalAmount.toLocaleString()} now`}
           </Button>
         </div>
       )}
@@ -171,7 +173,7 @@ export function PaymentStep({
             variant="primary"
             className="w-full"
             isLoading={isLoading}
-            onClick={handleManualSubmit}
+            onClick={() => handleManualSubmit(finalAmount)}
           >
             I've sent the payment
           </Button>

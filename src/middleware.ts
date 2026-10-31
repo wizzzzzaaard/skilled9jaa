@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { CAMPAIGN_SLUGS } from "@/lib/campaigns";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
@@ -27,10 +28,15 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const path = request.nextUrl.pathname;
 
-  // Public paths — always allow
-  const isPublic = ["/", "/about", "/homeservice", "/find", "/login", 
-    "/signup", "/suspended", "/bill", "/book", "/company", "/provider"
-  ].some(p => path === p || path.startsWith(p));
+  // Public paths — always allow.
+  // Match the exact path or a sub-path ("/find" and "/find/x", never "/findings").
+  // "/" must only match the home page: a bare startsWith("/") made every route public.
+  const publicPrefixes = ["/about", "/homeservice", "/find", "/login",
+    "/signup", "/suspended", "/bill", "/book", "/company", "/provider",
+    "/jobs", "/privacy", "/terms",
+    ...CAMPAIGN_SLUGS.map((slug) => `/${slug}`),
+  ];
+  const isPublic = path === "/" || publicPrefixes.some(p => path === p || path.startsWith(`${p}/`));
 
   if (!session) {
     if (!isPublic) {

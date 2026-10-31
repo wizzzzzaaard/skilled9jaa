@@ -162,6 +162,7 @@ export function SignupClient() {
                   isLoading={s.isLoading}
                   handleManualSubmit={s.handleManualSubmit}
                   handlePaystackPay={s.handlePaystackPay}
+                  confirmingPayment={s.confirmingPayment}
                   setStep={s.setStep}
                   isArtisan={s.isArtisan}
                   amount={
