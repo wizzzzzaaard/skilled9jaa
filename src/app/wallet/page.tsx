@@ -5,6 +5,7 @@ import { useWallet } from "@/lib/hooks/useWallet";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency } from "@/lib/utils/format";
+import { WithdrawPanel } from "@/components/wallet/WithdrawPanel";
 import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
 export default function WalletPage() {
@@ -81,6 +82,8 @@ export default function WalletPage() {
             )}
           </div>
         </div>
+
+        {user && !walletLoading && <WithdrawPanel userId={user.id} balance={Number(wallet?.balance || 0)} />}
 
         {/* Transactions */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">

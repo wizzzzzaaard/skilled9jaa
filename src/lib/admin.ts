@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-export type AdminResult<T = unknown> = { ok: true; data: T } | { ok: false; error: string; notDeployed?: boolean };
+export type AdminResult<T = unknown> = { ok: true; data: T } | { ok: false; error: string; notDeployed?: boolean; needsMfa?: boolean };
 
 /** Calls the admin-actions server function (admin check and audit log happen there). */
 export async function callAdmin<T = unknown>(action: string, body: Record<string, unknown> = {}, fn = "admin-actions"): Promise<AdminResult<T>> {
@@ -20,7 +20,7 @@ export async function callAdmin<T = unknown>(action: string, body: Record<string
     });
     if (res.status === 404) return { ok: false, error: "This needs the admin-actions server function, which isn't deployed yet.", notDeployed: true };
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: json.error ?? `Request failed (${res.status})` };
+    if (!res.ok) return { ok: false, error: json.error ?? `Request failed (${res.status})`, needsMfa: !!json.needsMfa };
     return { ok: true, data: json as T };
   } catch {
     return { ok: false, error: "Can't reach the server. Check your connection." };

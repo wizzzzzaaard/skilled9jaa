@@ -5,6 +5,7 @@ import { PageLoader } from "@/components/layout/PageLoader";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";
 import { LogOut } from "lucide-react";
+import { YourData } from "@/components/settings/YourData";
 
 export default function SettingsPage() {
   const { isLoading } = useSession();
@@ -33,6 +34,8 @@ export default function SettingsPage() {
               Sign Out
             </Button>
           </div>
+          <hr className="border-gray-100" />
+          <YourData />
         </div>
       </div>
     </div>

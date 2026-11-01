@@ -9,6 +9,7 @@ import { useSession } from "@/lib/hooks/useSession";
 import { Button } from "@/components/ui/Button";
 import { formatPay, isClosed, loadEmployers, postedAgo, shareText, type Employer } from "@/lib/jobs";
 import { checkDocument, uploadApplicationDocument } from "@/lib/documents";
+import { ReportButton } from "@/components/report/ReportButton";
 
 interface Job {
   id: string;
@@ -351,6 +352,13 @@ export default function JobDetailClient() {
         )}
 
         {applyPanel}
+
+        {!ownJob && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 text-sm text-text-secondary">
+            <p>Never pay to apply or to be shortlisted.</p>
+            <ReportButton targetType="job" targetId={job.id} />
+          </div>
+        )}
       </div>
     </div>
   );

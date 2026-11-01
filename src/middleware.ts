@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CAMPAIGN_SLUGS } from "@/lib/campaigns";
+import { isOwnerPath } from "@/lib/adminPaths";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
@@ -64,6 +65,25 @@ export async function middleware(request: NextRequest) {
   // Admin gate
   if (path.startsWith("/admin") && !profile.is_admin) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (path.startsWith("/admin")) {
+    // Two-step login: an admin with an authenticator app must confirm it first.
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+      const step = new URL("/two-step", request.url);
+      step.searchParams.set("next", path + request.nextUrl.search);
+      return NextResponse.redirect(step);
+    }
+    // Optional: make every admin set one up before using the admin.
+    if (process.env.NEXT_PUBLIC_REQUIRE_ADMIN_MFA === "true" && aal?.nextLevel !== "aal2" && path !== "/admin/security") {
+      return NextResponse.redirect(new URL("/admin/security?required=1", request.url));
+    }
+    // Support admins can't open money, settings, team or personal-data pages.
+    if (isOwnerPath(path)) {
+      const { data: role, error } = await supabase.from("profiles").select("admin_role").eq("id", session.user.id).maybeSingle();
+      if (!error && role?.admin_role === "support") return NextResponse.redirect(new URL("/admin?owner_only=1", request.url));
+    }
   }
 
   // Onboarding gate — applies everywhere except onboarding paths

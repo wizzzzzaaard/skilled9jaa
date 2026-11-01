@@ -8,6 +8,7 @@ Browser tests use Playwright. Run each against a production build (`next build &
 | `e2e/paid-flow.e2e.js` | Pay-before-entry mode: card, closed pop-up, transfer to pending page, home-service plan prices | Same, plus `NEXT_PUBLIC_FREE_SIGNUP=false` |
 | `e2e/jobs-admin.e2e.js` | Jobs list (pages, FCT, perks, pay, search), job page, applying with private CV, employer view, admin overview and transfer search | Stand-in database |
 | `e2e/admin.e2e.js` | Members search (name, S9- reference), filters, bulk let-in, suspend/mark paid with reasons, CSV export safety, job moderation, audit log, reports, payment switches, phone menu, axe | Stand-in database (it mirrors the `admin-actions` function) |
+| `e2e/admin-safety.e2e.js` | Report button, moderation queue, hiding posts, fraud warnings, admin roles, two-step login (stand-in code 123456), notes, refunds, wallet withdrawals, renewals, data requests and account deletion, saved views, broadcasts reaching members, bookings, ID checks, axe on 9 admin pages | Stand-in database |
 | `e2e/landing.e2e.js` | 18 landing pages, signup form edge cases, calculator, routing | Real project URL (Supabase calls are intercepted in the browser) |
 | `e2e/core.e2e.js` | Homepage, login, password reset, job posting entry | Real project URL (intercepted) |
 | `db/security.sql` | Database permissions after the security migration | A Supabase branch, never production |

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { callAdmin } from "@/lib/admin";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { transferReference, naira } from "@/lib/payments";
 import { NIGERIAN_STATES } from "@/lib/nigeria";
+import { useAdminRole } from "@/lib/adminMe";
 
 interface Member {
   id: string;
@@ -42,6 +43,29 @@ interface Filters {
 }
 const EMPTY: Filters = { q: "", role: "", status: "", paid: "", state: "", joined: "", source: "", mocks: false };
 const PAGE = 25;
+const FILTER_KEYS = ["q", "role", "status", "paid", "state", "joined", "source"] as const;
+const VIEWS_KEY = "s9-admin-member-views";
+type View = { name: string; f: Partial<Filters> };
+const BUILT_IN: View[] = [
+  { name: "Stuck this week", f: { status: "stuck", joined: "7" } },
+  { name: "Paid", f: { paid: "paid" } },
+  { name: "Companies", f: { role: "company" } },
+  { name: "Joined today", f: { joined: "1" } },
+  { name: "Suspended", f: { status: "suspended" } },
+];
+function readViews(): View[] {
+  try { return JSON.parse(localStorage.getItem(VIEWS_KEY) || "[]"); } catch { return []; }
+}
+function writeViews(v: View[]) {
+  try { localStorage.setItem(VIEWS_KEY, JSON.stringify(v)); } catch { /* storage blocked: views just won't persist */ }
+}
+function filtersFromUrl(): Filters {
+  const sp = new URLSearchParams(window.location.search);
+  const f = { ...EMPTY };
+  for (const k of FILTER_KEYS) f[k] = (sp.get(k) ?? "").slice(0, 80);
+  f.mocks = sp.get("mocks") === "1";
+  return f;
+}
 const STUCK = ["incomplete", "pending_payment", "pending_manual"];
 const BASE_COLS =
   "id, full_name, email, phone_number, state, city, account_status, payment_status, active_mode, is_artisan, is_company, is_home_service_provider, is_client, is_admin, is_mock, company_name, signup_step, created_at";
@@ -77,7 +101,11 @@ function applyFilters(q: Q, f: Filters): Q {
     q = q.gte("id", `${h}-0000-0000-0000-000000000000`).lte("id", `${h}-ffff-ffff-ffff-ffffffffffff`);
   } else if (term) {
     const t = term.replace(/[%,()]/g, " ");
-    q = q.or(`full_name.ilike.%${t}%,email.ilike.%${t}%,phone_number.ilike.%${t}%,company_name.ilike.%${t}%`);
+    // Phone numbers are saved in many shapes (0803…, +234 803 …), so match the
+    // last 10 digits with anything between them.
+    const digits = term.replace(/\D/g, "");
+    const phone = digits.length >= 7 ? `%${digits.slice(-10).split("").join("%")}%` : `%${t}%`;
+    q = q.or(`full_name.ilike.%${t}%,email.ilike.%${t}%,phone_number.ilike.${phone},company_name.ilike.%${t}%`);
   }
   if (f.role === "artisan") q = q.eq("is_artisan", true);
   if (f.role === "company") q = q.eq("is_company", true);
@@ -120,9 +148,52 @@ export default function AdminMembersPage() {
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<Member | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [views, setViews] = useState<View[]>([]);
+  const [naming, setNaming] = useState<string | null>(null);
   const wide = useWide();
 
+  // Filters live in the address bar, so a filtered list can be bookmarked or shared.
+  useEffect(() => {
+    const f = filtersFromUrl();
+    setFilters(f);
+    setDraftQ(f.q);
+    setViews(readViews());
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (!ready) return;
+    const sp = new URLSearchParams();
+    for (const k of FILTER_KEYS) if (filters[k]) sp.set(k, filters[k]);
+    if (filters.mocks) sp.set("mocks", "1");
+    const qs = sp.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [filters, ready]);
+
+  const applyView = (v: View) => {
+    const f = { ...EMPTY, ...v.f };
+    setFilters(f);
+    setDraftQ(f.q);
+    setPage(0);
+    setSelected(new Set());
+  };
+  const isView = (v: View) => FILTER_KEYS.every((k) => (v.f[k] ?? "") === filters[k]) && !!v.f.mocks === filters.mocks;
+  const saveView = () => {
+    const name = (naming ?? "").trim().slice(0, 40);
+    if (!name) return;
+    const next = [...views.filter((v) => v.name !== name), { name, f: { ...filters } }];
+    setViews(next);
+    writeViews(next);
+    setNaming(null);
+  };
+  const deleteView = (name: string) => {
+    const next = views.filter((v) => v.name !== name);
+    setViews(next);
+    writeViews(next);
+  };
+
   const load = useCallback(async () => {
+    if (!ready) return;
     setLoading(true);
     setError(null);
     const supabase = createClient();
@@ -142,7 +213,7 @@ export default function AdminMembersPage() {
       setCount(res.count ?? null);
     }
     setLoading(false);
-  }, [filters, page, hasSource]);
+  }, [filters, page, hasSource, ready]);
 
   useEffect(() => {
     load();
@@ -226,7 +297,28 @@ export default function AdminMembersPage() {
         </button>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Saved views">
+        {[...BUILT_IN, ...views].map((v, i) => (
+          <span key={`${v.name}-${i}`} className={`inline-flex items-center rounded-full border text-sm ${isView(v) ? "bg-primary text-white border-primary" : "bg-white border-gray-200"}`}>
+            <button type="button" onClick={() => applyView(v)} aria-pressed={isView(v)} className="px-3 py-1 font-semibold">{v.name}</button>
+            {i >= BUILT_IN.length && (
+              <button type="button" onClick={() => deleteView(v.name)} className="pr-2.5 pl-0.5 py-1" aria-label={`Delete view ${v.name}`}>×</button>
+            )}
+          </span>
+        ))}
+        {naming === null ? (
+          <button type="button" onClick={() => setNaming("")} className="px-3 py-1 rounded-full border border-dashed border-gray-300 text-sm font-semibold text-text-secondary">+ Save this view</button>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); saveView(); }} className="inline-flex gap-1">
+            <label htmlFor="view-name" className="sr-only">View name</label>
+            <input id="view-name" autoFocus value={naming} onChange={(e) => setNaming(e.target.value)} placeholder="Name this view" maxLength={40} className="rounded-full border border-gray-200 px-3 py-1 text-sm" />
+            <button type="submit" className="px-3 py-1 rounded-full bg-primary text-white text-sm font-semibold">Save</button>
+            <button type="button" onClick={() => setNaming(null)} className="px-2 py-1 text-sm">Cancel</button>
+          </form>
+        )}
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2">
           <label htmlFor="m-q" className="sr-only">Search members</label>
           <input id="m-q" value={draftQ} onChange={(e) => setDraftQ(e.target.value)} placeholder="Name, email, phone, company or S9- reference" className={`${selectCls} w-full`} />
@@ -397,28 +489,82 @@ export default function AdminMembersPage() {
   );
 }
 
+type Pay = { id: string; kind: "card" | "transfer"; amount: number; status: string; created_at: string; refund_amount?: number | null };
+interface Note { id: number; created_at: string; body: string; admin_name: string }
+
 function MemberPanel({ member, onClose, onChanged }: { member: Member; onClose: () => void; onChanged: () => void }) {
   const [m, setM] = useState(member);
-  const [payments, setPayments] = useState<{ kind: string; amount: number; status: string; created_at: string }[] | null>(null);
+  const owner = useAdminRole() !== "support";
+  const [payments, setPayments] = useState<Pay[] | null>(null);
+  const [refunding, setRefunding] = useState<Pay | null>(null);
+  const [notes, setNotes] = useState<Note[] | null>(null);
+  const [notesMissing, setNotesMissing] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteWord, setDeleteWord] = useState("");
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   const [confirm, setConfirm] = useState<null | "suspend" | "reactivate" | "paid" | "letin">(null);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const loadPayments = useCallback(() => {
     const supabase = createClient();
     Promise.all([
-      supabase.from("user_payments").select("amount, status, created_at").eq("user_id", member.id).order("created_at", { ascending: false }),
-      supabase.from("orders").select("amount, status, created_at, order_type").eq("user_id", member.id).order("created_at", { ascending: false }),
+      supabase.from("user_payments").select("*").eq("user_id", member.id).order("created_at", { ascending: false }),
+      supabase.from("orders").select("*").eq("user_id", member.id).order("created_at", { ascending: false }),
     ]).then(([t, o]) => {
-      const tx = ((t.data ?? []) as { amount: number; status: string; created_at: string }[]).map((x) => ({ kind: "Bank transfer", ...x }));
-      const cards = ((o.data ?? []) as { amount: number; status: string; created_at: string }[]).map((x) => ({ kind: "Card (Paystack)", ...x }));
+      const tx = ((t.data ?? []) as Omit<Pay, "kind">[]).map((x) => ({ ...x, kind: "transfer" as const }));
+      const cards = ((o.data ?? []) as Omit<Pay, "kind">[]).map((x) => ({ ...x, kind: "card" as const }));
       setPayments([...tx, ...cards].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     });
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+  }, [member.id]);
+
+  useEffect(() => {
+    loadPayments();
+    callAdmin<{ data: Note[]; missing?: boolean }>("list_notes", { user_id: member.id }).then((res) => {
+      if (res.ok) { setNotes(res.data.data ?? []); setNotesMissing(!!res.data.missing); }
+      else setNotes([]);
+    });
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [member.id, onClose]);
+  }, [member.id, loadPayments]);
+
+  async function addNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    const res = await callAdmin<{ note: Note }>("add_note", { user_id: m.id, body: noteText });
+    if (!res.ok) return setMsg(res.error);
+    setNotes((n) => [res.data.note, ...(n ?? [])]);
+    setNoteText("");
+  }
+
+  async function exportData() {
+    setBusy(true);
+    const res = await callAdmin<{ data: unknown }>("export_member", { user_id: m.id, reason: "Data access request" });
+    setBusy(false);
+    if (!res.ok) return setMsg(res.error);
+    const blob = new Blob([JSON.stringify(res.data.data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `skilled9ja-data-${transferReference(m.id)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setMsg("Downloaded. Send it to the member by email; don't post it anywhere public.");
+  }
+
+  async function deleteAccount() {
+    setBusy(true);
+    const res = await callAdmin("delete_member", { user_id: m.id, confirm: deleteWord, reason: reason || "Member asked to delete their account" });
+    setBusy(false);
+    if (!res.ok) return setMsg(res.error);
+    setDeleting(false);
+    setM({ ...m, full_name: "Deleted member", email: null, phone_number: null, account_status: "suspended" });
+    setMsg("Account deleted. Payment records were kept without their details.");
+    onChanged();
+  }
 
   async function run() {
     if (!confirm) return;
@@ -485,14 +631,44 @@ function MemberPanel({ member, onClose, onChanged }: { member: Member; onClose: 
         ) : payments.length === 0 ? (
           <p className="text-sm text-text-secondary mt-1">No payments.</p>
         ) : (
-          <ul className="mt-2 space-y-1 text-sm">
-            {payments.map((p, i) => (
-              <li key={i} className="flex justify-between gap-3">
-                <span>{p.kind}, {new Date(p.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}</span>
-                <span className="font-semibold">{naira(Number(p.amount))} <span className="font-normal text-text-secondary">{p.status}</span></span>
+          <ul className="mt-2 space-y-2 text-sm">
+            {payments.map((p) => (
+              <li key={`${p.kind}-${p.id}`}>
+                <div className="flex justify-between gap-3">
+                  <span>{p.kind === "card" ? "Card (Paystack)" : "Bank transfer"}, {new Date(p.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}</span>
+                  <span className="font-semibold">{naira(Number(p.amount))} <span className="font-normal text-text-secondary">{p.status}{p.status === "refunded" && p.refund_amount ? ` (${naira(Number(p.refund_amount))})` : ""}</span></span>
+                </div>
+                {owner && ["verified", "approved"].includes(p.status) && refunding?.id !== p.id && (
+                  <button type="button" onClick={() => setRefunding(p)} className="text-xs font-semibold underline">Refund</button>
+                )}
+                {refunding?.id === p.id && (
+                  <RefundForm pay={p} onCancel={() => setRefunding(null)} onDone={(text) => { setRefunding(null); setMsg(text); loadPayments(); onChanged(); }} />
+                )}
               </li>
             ))}
           </ul>
+        )}
+
+        <h3 className="mt-5 font-semibold text-text-primary">Team notes</h3>
+        <p className="text-xs text-text-secondary">Only admins see these.</p>
+        {notesMissing ? (
+          <p className="text-sm text-text-secondary mt-1">Notes arrive with the trust &amp; safety database update.</p>
+        ) : (
+          <>
+            <form onSubmit={addNote} className="mt-2 flex gap-2">
+              <label htmlFor="note-text" className="sr-only">Add a note</label>
+              <input id="note-text" value={noteText} onChange={(e) => setNoteText(e.target.value)} maxLength={2000} placeholder="e.g. Called 12 Oct, will pay Friday" className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+              <button type="submit" disabled={!noteText.trim()} className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50">Add</button>
+            </form>
+            <ul className="mt-2 space-y-2">
+              {(notes ?? []).map((n) => (
+                <li key={n.id} className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+                  <p className="break-words">{n.body}</p>
+                  <p className="text-xs text-text-secondary mt-0.5">{n.admin_name} · {new Date(n.created_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         <h3 className="mt-5 font-semibold text-text-primary">Actions</h3>
@@ -521,6 +697,62 @@ function MemberPanel({ member, onClose, onChanged }: { member: Member; onClose: 
             {confirm === "suspend" && reason.trim().length < 3 && <p className="text-xs text-text-secondary mt-1">A reason is required to suspend.</p>}
           </div>
         )}
+
+        {owner && !m.is_admin && m.full_name !== "Deleted member" && (
+          <>
+            <h3 className="mt-6 font-semibold text-text-primary">Personal data</h3>
+            <p className="text-xs text-text-secondary">For requests under the Nigeria Data Protection Act.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" onClick={exportData} disabled={busy} className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold">Download their data</button>
+              {!deleting && <button type="button" onClick={() => setDeleting(true)} className="px-3 py-2 rounded-lg border border-red-200 text-red-800 text-sm font-semibold">Delete account</button>}
+            </div>
+            {deleting && (
+              <div className="mt-2 p-3 rounded-lg border border-red-200 bg-red-50">
+                <p className="text-sm font-semibold">This erases their name, contacts, photos, posts, applications and ID documents, and closes their login. It can&apos;t be undone. Payment records stay, without their details.</p>
+                <label htmlFor="del-word" className="block text-sm mt-2">Type DELETE to confirm</label>
+                <input id="del-word" value={deleteWord} onChange={(e) => setDeleteWord(e.target.value)} className="mt-1 w-40 rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                <div className="mt-3 flex gap-2">
+                  <button type="button" disabled={busy || deleteWord !== "DELETE"} onClick={deleteAccount} className="px-3 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold disabled:opacity-50">Delete account</button>
+                  <button type="button" onClick={() => { setDeleting(false); setDeleteWord(""); }} className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold">Cancel</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RefundForm({ pay, onCancel, onDone }: { pay: Pay; onCancel: () => void; onDone: (text: string) => void }) {
+  const [amount, setAmount] = useState(String(pay.amount));
+  const [reason, setReason] = useState("");
+  const [revoke, setRevoke] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const n = Number(amount);
+  const valid = n > 0 && n <= Number(pay.amount) && reason.trim().length >= 3;
+  async function go() {
+    setBusy(true);
+    setErr(null);
+    const res = await callAdmin("refund", { kind: pay.kind, id: pay.id, amount: n, reason, revoke });
+    setBusy(false);
+    if (!res.ok) return setErr(res.error);
+    onDone(pay.kind === "card" ? `Refund of ${naira(n)} sent through Paystack. It reaches the member's card in about 5 to 10 working days.` : `Refund of ${naira(n)} recorded. Send the money back to the member's bank yourself.`);
+  }
+  return (
+    <div className="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
+      <p className="text-sm font-semibold">{pay.kind === "card" ? "Refund through Paystack" : "Record a transfer refund"}</p>
+      {pay.kind === "transfer" && <p className="text-xs text-text-secondary">This only records it. Send the money back from the bank account yourself.</p>}
+      <label htmlFor={`ref-amt-${pay.id}`} className="block text-sm mt-2">Amount (₦, up to {naira(Number(pay.amount))})</label>
+      <input id={`ref-amt-${pay.id}`} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))} className="mt-1 w-40 rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+      <label htmlFor={`ref-why-${pay.id}`} className="block text-sm mt-2">Reason</label>
+      <input id={`ref-why-${pay.id}`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+      <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={revoke} onChange={(e) => setRevoke(e.target.checked)} className="w-4 h-4 accent-[#1B4332]" /> Remove their paid features</label>
+      {err && <p className="mt-2 text-sm font-semibold text-red-700" role="alert">{err}</p>}
+      <div className="mt-3 flex gap-2">
+        <button type="button" disabled={busy || !valid} onClick={go} className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50">{busy ? "Refunding…" : "Refund"}</button>
+        <button type="button" onClick={onCancel} className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold">Cancel</button>
       </div>
     </div>
   );

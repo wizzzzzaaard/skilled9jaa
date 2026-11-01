@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ReportButton } from "@/components/report/ReportButton";
 import { PageLoader } from "@/components/layout/PageLoader";
 import {
   MapPin, Globe, CheckCircle, ChevronLeft,
@@ -55,6 +56,7 @@ export default function CompanyClient() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<number | string | null>(null);
 
   useEffect(() => {
     fetchAll();
@@ -157,6 +159,10 @@ export default function CompanyClient() {
           onClick={() => setSelectedImage(null)}
         >
           <img src={selectedImage} alt="" className="max-w-full max-h-full rounded-xl object-contain" />
+          <div className="absolute bottom-0 inset-x-0 flex items-center justify-between gap-3 p-4 bg-gradient-to-t from-black/80" onClick={(e) => e.stopPropagation()}>
+            {selectedPostId != null ? <ReportButton targetType="post" targetId={selectedPostId} className="!text-white" /> : <span />}
+            <button type="button" onClick={() => setSelectedImage(null)} className="px-4 py-2 rounded-lg bg-white text-sm font-semibold">Close</button>
+          </div>
         </div>
       )}
 
@@ -190,6 +196,7 @@ export default function CompanyClient() {
                 )}
               </div>
 
+              <ReportButton targetType="profile" targetId={company.id} className="mt-1 !text-xs" />
               {company.industry && (
                 <p className="text-sm text-text-secondary mt-0.5">{company.industry}</p>
               )}
@@ -260,7 +267,7 @@ export default function CompanyClient() {
               {posts.map((post) => (
                 <button
                   key={post.id}
-                  onClick={() => setSelectedImage(post.media_urls[0])}
+                  onClick={() => { setSelectedImage(post.media_urls[0]); setSelectedPostId(post.id); }}
                   className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 group"
                 >
                   <img

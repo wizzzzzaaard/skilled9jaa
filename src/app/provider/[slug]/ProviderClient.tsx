@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ReportButton } from "@/components/report/ReportButton";
 import { PageLoader } from "@/components/layout/PageLoader";
 import {
   MapPin, Share2, CheckCircle, ChevronLeft,
@@ -55,6 +56,7 @@ export default function ProviderClient() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<number | string | null>(null);
 
   useEffect(() => {
     fetchAll();
@@ -142,6 +144,10 @@ export default function ProviderClient() {
           ) : (
             <img src={selectedMedia} alt="" className="max-w-full max-h-full rounded-xl object-contain" />
           )}
+          <div className="absolute bottom-0 inset-x-0 flex items-center justify-between gap-3 p-4 bg-gradient-to-t from-black/80" onClick={(e) => e.stopPropagation()}>
+            {selectedPostId != null ? <ReportButton targetType="post" targetId={selectedPostId} className="!text-white" /> : <span />}
+            <button type="button" onClick={() => setSelectedMedia(null)} className="px-4 py-2 rounded-lg bg-white text-sm font-semibold">Close</button>
+          </div>
         </div>
       )}
 
@@ -193,6 +199,7 @@ export default function ProviderClient() {
                 </div>
               )}
 
+              <ReportButton targetType="profile" targetId={provider.id} className="mt-1 !text-xs" />
               {provider.years_of_experience ? (
                 <p className="text-xs text-text-secondary mt-1">
                   {provider.years_of_experience} year{provider.years_of_experience !== 1 ? "s" : ""} experience
@@ -340,7 +347,7 @@ export default function ProviderClient() {
               {posts.map((post) => (
                 <button
                   key={post.id}
-                  onClick={() => setSelectedMedia(post.media_urls[0])}
+                  onClick={() => { setSelectedMedia(post.media_urls[0]); setSelectedPostId(post.id); }}
                   className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 group"
                 >
                   {post.post_type === "video" ? (
